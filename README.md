@@ -1,4 +1,4 @@
-# Project Title
+# @richardmcquiston01/lms-package-maker
 
 - Author: [Richard McQuiston](mailto:richard.mcquiston@gmail.com)
 - Website: https://richardmcquiston.com/
@@ -10,6 +10,8 @@
 | [Overview](#overview) | [Getting Started](#getting-started) | [Buy Me a Coffee](#buy-me-a-coffee) | [License](#license) | [Copyright](#copyright) |
 
 ## Overview
+
+Generate LMS compatible learning content with the ability to export into as many formats as possible(SCORM, xAPI, LTI, etc.). Available via a Web Application, Docker container, or Electron application.
 
 [Back to Top](#table-of-contents)
 
