@@ -13,6 +13,10 @@
 
 Generate LMS compatible learning content with the ability to export into as many formats as possible(SCORM, xAPI, LTI, etc.). Available via a Web Application, Docker container, or Electron application.
 
+Author content once and export it as an HTML5 package that any LMS can import: SCORM 1.2, SCORM 2004, xAPI, cmi5, AICC, or plain HTML5. Packages are verified against [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) so both projects improve together.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design and [ROADMAP.md](ROADMAP.md) for milestones.
+
 [Back to Top](#table-of-contents)
 
 ## Getting Started
