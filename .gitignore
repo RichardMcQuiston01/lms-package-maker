@@ -1,5 +1,5 @@
 # dependencies
-/node_modules
+node_modules/
 
 # testing
 /coverage
@@ -31,4 +31,13 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+next-env.d.ts
+
+# build output
+dist/
+*.tsbuildinfo
+.next/
+
+# local data
+/apps/web/data/
 next-env.d.ts

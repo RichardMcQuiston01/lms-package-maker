@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// A course being authored. The Course Model JSON is the single source for exports.
+model Project {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  description String   @default("")
+  courseJson  Json     @map("course_json")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  exports PackageExport[]
+
+  @@map("project")
+}
+
+/// One generated package. The zip itself lives in storage under `storageKey`.
+model PackageExport {
+  id         String   @id @default(uuid()) @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  standard   String
+  storageKey String   @map("storage_key")
+  byteSize   Int      @map("byte_size")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("package_export")
+}

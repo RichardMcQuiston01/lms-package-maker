@@ -23,9 +23,26 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design and [ROADMAP.md]
 
 ### Prerequisites
 
+- [Bun](https://bun.sh) 1.4+ (workspaces, tests)
+- Node.js 22+
+- PostgreSQL 16+ (Prisma)
+
 ### Installation
 
+```bash
+bun install
+cp apps/web/.env.example apps/web/.env
+```
+
 ### Usage
+
+```bash
+bun run test        # unit tests
+bun run typecheck   # packages and web app
+cd apps/web && bunx prisma migrate dev && bun run dev
+```
+
+Stack: Next.js, Prisma, TailwindCSS. Stored files use [storage-adapters](https://github.com/RichardMcQuiston01/storage-adapters) and errors go through [error-log-adapter](https://github.com/RichardMcQuiston01/error-log-adapter), so both sinks can be swapped without changing application code.
 
 ### Examples
 
