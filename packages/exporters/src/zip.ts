@@ -1,6 +1,6 @@
 import { zipSync } from 'fflate';
 import type { Result } from '@richardmcquiston01/lms-package-maker-model';
-import type { PackageFiles } from './types';
+import type { PackageFiles } from './types.js';
 
 /** Fixed timestamp so identical input always yields identical bytes. */
 const ZIP_EPOCH: Date = new Date('2000-01-01T00:00:00Z');

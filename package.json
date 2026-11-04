@@ -10,8 +10,10 @@
     "apps/*"
   ],
   "scripts": {
-    "typecheck": "tsc -b packages/model packages/exporters && bun run --cwd apps/web typecheck",
-    "test": "bun test packages/model/src packages/exporters/src apps/web/lib",
+    "build:bundles": "bun scripts/build-bundles.ts",
+    "build": "bun run build:bundles && tsc -b packages/model packages/runtime packages/player packages/exporters packages/exporter-html5 packages/exporter-scorm12",
+    "typecheck": "bun run build && tsc -p tsconfig.test.json && bun run --cwd apps/web typecheck",
+    "test": "bun run build && bun test packages apps/web/lib",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

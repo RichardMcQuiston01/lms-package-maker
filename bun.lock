@@ -34,9 +34,30 @@
         "typescript": "~5.8.3",
       },
     },
+    "packages/exporter-html5": {
+      "name": "@richardmcquiston01/lms-package-maker-exporter-html5",
+      "version": "0.1.0",
+      "dependencies": {
+        "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-model": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-player": "workspace:*",
+      },
+    },
+    "packages/exporter-scorm12": {
+      "name": "@richardmcquiston01/lms-package-maker-exporter-scorm12",
+      "version": "0.1.0",
+      "dependencies": {
+        "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-model": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-player": "workspace:*",
+      },
+      "devDependencies": {
+        "fflate": "^0.8.2",
+      },
+    },
     "packages/exporters": {
       "name": "@richardmcquiston01/lms-package-maker-exporters",
-      "version": "0.0.0",
+      "version": "0.1.0",
       "dependencies": {
         "@richardmcquiston01/lms-package-maker-model": "workspace:*",
         "fflate": "^0.8.2",
@@ -44,7 +65,19 @@
     },
     "packages/model": {
       "name": "@richardmcquiston01/lms-package-maker-model",
-      "version": "0.0.0",
+      "version": "0.1.0",
+    },
+    "packages/player": {
+      "name": "@richardmcquiston01/lms-package-maker-player",
+      "version": "0.1.0",
+      "dependencies": {
+        "@richardmcquiston01/lms-package-maker-model": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-runtime": "workspace:*",
+      },
+    },
+    "packages/runtime": {
+      "name": "@richardmcquiston01/lms-package-maker-runtime",
+      "version": "0.1.0",
     },
   },
   "packages": {
@@ -150,9 +183,17 @@
 
     "@richardmcquiston01/error-log-adapter": ["@richardmcquiston01/error-log-adapter@0.15.1", "", {}, "sha512-ohjhjGVRPOfDAH/5O0IvtlXIuLMpmyrQcBTY4L7HVKoo02CmYyijMyKLBpKhuGwwExJu/40tJuCwJijDzSUUCA=="],
 
+    "@richardmcquiston01/lms-package-maker-exporter-html5": ["@richardmcquiston01/lms-package-maker-exporter-html5@workspace:packages/exporter-html5"],
+
+    "@richardmcquiston01/lms-package-maker-exporter-scorm12": ["@richardmcquiston01/lms-package-maker-exporter-scorm12@workspace:packages/exporter-scorm12"],
+
     "@richardmcquiston01/lms-package-maker-exporters": ["@richardmcquiston01/lms-package-maker-exporters@workspace:packages/exporters"],
 
     "@richardmcquiston01/lms-package-maker-model": ["@richardmcquiston01/lms-package-maker-model@workspace:packages/model"],
+
+    "@richardmcquiston01/lms-package-maker-player": ["@richardmcquiston01/lms-package-maker-player@workspace:packages/player"],
+
+    "@richardmcquiston01/lms-package-maker-runtime": ["@richardmcquiston01/lms-package-maker-runtime@workspace:packages/runtime"],
 
     "@richardmcquiston01/lms-package-maker-web": ["@richardmcquiston01/lms-package-maker-web@workspace:apps/web"],
 
