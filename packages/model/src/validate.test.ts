@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { validateCourseModel } from './validate';
+import { validateCourseModel } from './validate.js';
 
 const validCourse: unknown = {
   modelVersion: 1,

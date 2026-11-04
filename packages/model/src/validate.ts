@@ -1,4 +1,8 @@
-import { COURSE_MODEL_VERSION, type CourseModel, type Result } from './types';
+import {
+  COURSE_MODEL_VERSION,
+  type CourseModel,
+  type Result,
+} from './types.js';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

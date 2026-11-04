@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { unzipSync } from 'fflate';
-import { zipPackage } from './zip';
+import { zipPackage } from './zip.js';
 
 const encoder: TextEncoder = new TextEncoder();
 

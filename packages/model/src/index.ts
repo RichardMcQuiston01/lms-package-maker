@@ -1,2 +1,2 @@
-export * from './types';
-export { validateCourseModel } from './validate';
+export * from './types.js';
+export { validateCourseModel } from './validate.js';

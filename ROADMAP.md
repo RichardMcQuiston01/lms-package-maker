@@ -12,9 +12,10 @@ HTML5 and SCORM 1.2 import today.
 
 ## M1 – HTML5 and SCORM 1.2
 
-- [ ] Content Runtime with SCORM 1.2 adapter
-- [ ] HTML5 and SCORM 1.2 exporters
-- [ ] Conformance harness: XSD validation + reactive-lms round trip
+- [x] Content Runtime with SCORM 1.2 and postMessage adapters (`packages/runtime`)
+- [x] HTML5 and SCORM 1.2 exporters (`packages/exporter-html5`, `packages/exporter-scorm12`)
+- [ ] Conformance harness: XSD validation + reactive-lms round trip (checked by hand so far: reactive-lms detects and parses both exports; committed CI test still to do)
+- [ ] Ship the SCORM 1.2 XSD files in the package and validate the manifest against them
 
 ## M2 – Authoring MVP
 

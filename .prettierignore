@@ -8,3 +8,4 @@ dist
 README.md
 bun.lock
 .github/rulesets
+*.generated.ts

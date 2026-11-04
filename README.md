@@ -34,6 +34,21 @@ bun install
 cp apps/web/.env.example apps/web/.env
 ```
 
+### Packages
+
+Each package under `packages/` is built to be published on its own (ESM, typed, `exports` map). They are marked `private` until a release is cut; remove that flag to publish.
+
+| Package | Purpose |
+| --- | --- |
+| `model` | Course Model types and validation |
+| `runtime` | Browser runtime: SCORM 1.2 API or `postMessage` to the host |
+| `player` | Static course player generated from a Course Model |
+| `exporters` | `Exporter` interface and deterministic zip |
+| `exporter-html5` | Plain HTML5 package |
+| `exporter-scorm12` | SCORM 1.2 package |
+
+The browser scripts are bundled from source into `*.generated.ts` files (`bun run build:bundles`); a test fails if they are stale.
+
 ### Usage
 
 ```bash
