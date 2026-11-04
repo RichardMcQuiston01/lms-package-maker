@@ -1,0 +1,12 @@
+{
+  "name": "@richardmcquiston01/lms-package-maker-exporters",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@richardmcquiston01/lms-package-maker-model": "workspace:*",
+    "fflate": "^0.8.2"
+  }
+}

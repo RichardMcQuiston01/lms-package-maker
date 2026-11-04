@@ -5,9 +5,10 @@ HTML5 and SCORM 1.2 import today.
 
 ## M0 – Foundation
 
-- [ ] Monorepo scaffold (TypeScript, Prettier, ESLint, CI)
-- [ ] Course Model + JSON Schema (`packages/model`)
-- [ ] Zip + exporter interface (`packages/exporters`)
+- [x] Monorepo scaffold (TypeScript, Prettier, CI); ESLint still to add
+- [x] Next.js + Tailwind + Prisma app shell with storage and error-log adapters
+- [x] Course Model types and validation (`packages/model`); JSON Schema still to add
+- [x] Zip + exporter interface (`packages/exporters`)
 
 ## M1 – HTML5 and SCORM 1.2
 
