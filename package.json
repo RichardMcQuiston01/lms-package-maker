@@ -16,7 +16,8 @@
     "test": "bun run build && bun test packages apps/web/lib scripts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "conformance:fetch": "bun scripts/fetch-reactive-lms.ts"
+    "conformance:fetch": "bun scripts/fetch-reactive-lms.ts",
+    "conformance:browser": "bun run --cwd packages/conformance install:browser"
   },
   "devDependencies": {
     "@types/bun": "^1",

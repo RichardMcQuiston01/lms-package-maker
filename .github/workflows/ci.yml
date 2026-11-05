@@ -23,6 +23,6 @@ jobs:
       - name: Fetch pinned reactive-lms (conformance tests)
         run: bun run conformance:fetch
       - name: Install Chromium (conformance tests)
-        run: bunx playwright-core install --with-deps chromium
+        run: bun run conformance:browser
       - run: bun run typecheck
       - run: bun run test

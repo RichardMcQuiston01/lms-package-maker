@@ -55,6 +55,7 @@ The browser scripts are bundled from source into `*.generated.ts` files (`bun ru
 
 ```bash
 bun run conformance:fetch   # clone the pinned commit into .cache/ and install it
+bun run conformance:browser # install the Chromium that the pinned Playwright expects
 bun run test                # conformance tests skip locally if the checkout is missing
 ```
 
