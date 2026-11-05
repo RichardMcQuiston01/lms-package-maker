@@ -36,7 +36,8 @@ describe('scorm12Exporter', () => {
     expect(manifest).toContain('<title>Safety &amp; Health</title>');
     expect(manifest).toContain('identifier="MANIFEST-safety_101"');
     for (const path of result.value.keys()) {
-      if (path !== 'imsmanifest.xml') {
+      // The manifest and the schema files are not resource files.
+      if (path !== 'imsmanifest.xml' && !path.endsWith('.xsd')) {
         expect(manifest).toContain(`<file href="${path}"/>`);
       }
     }
