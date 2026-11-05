@@ -49,6 +49,18 @@ Each package under `packages/` is built to be published on its own (ESM, typed, 
 
 The browser scripts are bundled from source into `*.generated.ts` files (`bun run build:bundles`); a test fails if they are stale.
 
+### Conformance tests
+
+`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper.
+
+```bash
+bun run conformance:fetch   # clone the pinned commit into .cache/ and install it
+bun run conformance:browser # install the Chromium that the pinned Playwright expects
+bun run test                # conformance tests skip locally if the checkout is missing
+```
+
+On CI (`CI` set) a missing checkout fails the run. To move the pin, change the commit in `reactive-lms.json`, run `conformance:fetch`, and make the tests pass.
+
 ### Usage
 
 ```bash

@@ -15,5 +15,14 @@ jobs:
           bun-version: 1.4.4
       - run: bun install --frozen-lockfile
       - run: bun run format:check
+      - name: Restore pinned reactive-lms checkout
+        uses: actions/cache@v4
+        with:
+          path: .cache/reactive-lms
+          key: reactive-lms-${{ hashFiles('packages/conformance/reactive-lms.json') }}
+      - name: Fetch pinned reactive-lms (conformance tests)
+        run: bun run conformance:fetch
+      - name: Install Chromium (conformance tests)
+        run: bun run conformance:browser
       - run: bun run typecheck
       - run: bun run test
