@@ -14,7 +14,8 @@ HTML5 and SCORM 1.2 import today.
 
 - [x] Content Runtime with SCORM 1.2 and postMessage adapters (`packages/runtime`)
 - [x] HTML5 and SCORM 1.2 exporters (`packages/exporter-html5`, `packages/exporter-scorm12`)
-- [ ] Conformance harness: XSD validation + reactive-lms round trip (checked by hand so far: reactive-lms detects and parses both exports; committed CI test still to do)
+- [x] Conformance tests against a pinned reactive-lms checkout (import, real `CmiStore` SCORM 1.2 API, `postMessage` mapper) in CI
+- [ ] Validate manifests against the XSD schemas
 - [ ] Ship the SCORM 1.2 XSD files in the package and validate the manifest against them
 
 ## M2 – Authoring MVP

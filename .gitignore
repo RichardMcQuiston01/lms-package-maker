@@ -41,3 +41,6 @@ dist/
 # local data
 /apps/web/data/
 next-env.d.ts
+
+# pinned reactive-lms checkout for conformance tests
+/.cache/

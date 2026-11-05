@@ -1,0 +1,16 @@
+{
+  "name": "@richardmcquiston01/lms-package-maker-conformance",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Checks exported packages against a pinned reactive-lms checkout",
+  "type": "module",
+  "dependencies": {
+    "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
+    "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
+    "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
+    "@richardmcquiston01/lms-package-maker-model": "workspace:*"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}
