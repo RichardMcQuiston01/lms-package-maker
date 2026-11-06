@@ -25,6 +25,16 @@ describe('findScorm12Api', () => {
     expect(findScorm12Api({ parent: {} })).toBeNull();
   });
 
+  test('survives a sandboxed window whose API cannot be read', () => {
+    const sandboxed: ApiWindow = {
+      get API(): never {
+        throw new Error('Sandbox access violation');
+      },
+    };
+    expect(findScorm12Api({ parent: sandboxed })).toBeNull();
+    expect(findScorm12Api(sandboxed)).toBeNull();
+  });
+
   test('survives a cross-origin parent that throws', () => {
     const blocked: ApiWindow = {
       get parent(): ApiWindow {

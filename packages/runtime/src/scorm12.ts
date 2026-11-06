@@ -33,19 +33,19 @@ const LOCATION_LIMIT = 255;
 function searchParents(start: ApiWindow): Scorm12Api | null {
   let current: ApiWindow = start;
   for (let depth = 0; depth < MAX_SEARCH_DEPTH; depth += 1) {
-    if (current.API !== undefined && current.API !== null) {
-      return current.API;
-    }
-    let next: ApiWindow | null | undefined;
+    // Reading any property of a cross-origin or sandboxed window can throw.
     try {
-      next = current.parent;
+      if (current.API !== undefined && current.API !== null) {
+        return current.API;
+      }
+      const next: ApiWindow | null | undefined = current.parent;
+      if (next === undefined || next === null || next === current) {
+        return null;
+      }
+      current = next;
     } catch {
       return null;
     }
-    if (next === undefined || next === null || next === current) {
-      return null;
-    }
-    current = next;
   }
   return null;
 }
