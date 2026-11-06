@@ -62,6 +62,24 @@ bun run test                # conformance tests skip locally if the checkout is 
 
 On CI (`CI` set) a missing checkout fails the run. To move the pin, change the commit in `reactive-lms.json`, run `conformance:fetch`, and make the tests pass.
 
+### Browser tests
+
+`packages/e2e` drives the built web app in Chromium: sign-up, authoring, media upload, a quiz, preview, SCORM and HTML5 export and sign-out with built-in accounts, plus header mode (including a forged header and the proxy secret) and single-user mode. They start `next start` themselves, so build first and give them a migrated database:
+
+```bash
+bun run build:web
+DATABASE_URL=postgresql://... bun run test   # skipped locally if the build or DATABASE_URL is missing; a failure on CI
+```
+
+### Docker
+
+```bash
+cp .env.example .env   # set AUTH_SECRET (openssl rand -base64 48) and POSTGRES_PASSWORD
+docker compose up --build
+```
+
+Open http://localhost:3000. The image runs the Next standalone server as a non-root user, applies migrations on start (set `SKIP_MIGRATIONS=true` to skip), keeps uploads and exports in the `/data` volume and answers `/api/health`. It reads the same settings as the app (`DATABASE_URL`, `AUTH_SECRET`, `IDENTITY_PROVIDER`, ...). For `header` or `single-user` identity, pass those variables to the `app` service.
+
 ### Usage
 
 ```bash

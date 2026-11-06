@@ -17,7 +17,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "conformance:fetch": "bun scripts/fetch-reactive-lms.ts",
-    "conformance:browser": "bun run --cwd packages/conformance install:browser"
+    "conformance:browser": "bun run --cwd packages/conformance install:browser",
+    "build:web": "bun run --cwd apps/web prisma generate && NODE_ENV=production bun run --cwd apps/web build"
   },
   "devDependencies": {
     "@types/bun": "^1",

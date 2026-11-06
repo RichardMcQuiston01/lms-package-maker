@@ -35,5 +35,6 @@ HTML5 and SCORM 1.2 import today.
 ## M4 – Distribution and extras
 
 - [ ] AICC export
-- [ ] Docker image and Electron app
+- [x] Docker image (Dockerfile and compose; the image build is not yet run in CI)
+- [ ] Electron app
 - [ ] Templates, themes, accessibility checks (WCAG 2.2 AA)

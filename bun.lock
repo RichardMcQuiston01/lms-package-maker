@@ -53,6 +53,14 @@
         "playwright-core": "1.63.0",
       },
     },
+    "packages/e2e": {
+      "name": "@richardmcquiston01/lms-package-maker-e2e",
+      "version": "0.0.0",
+      "devDependencies": {
+        "fflate": "^0.8.3",
+        "playwright-core": "1.63.0",
+      },
+    },
     "packages/exporter-html5": {
       "name": "@richardmcquiston01/lms-package-maker-exporter-html5",
       "version": "0.1.0",
@@ -208,6 +216,8 @@
     "@richardmcquiston01/error-log-adapter": ["@richardmcquiston01/error-log-adapter@0.15.1", "", {}, "sha512-ohjhjGVRPOfDAH/5O0IvtlXIuLMpmyrQcBTY4L7HVKoo02CmYyijMyKLBpKhuGwwExJu/40tJuCwJijDzSUUCA=="],
 
     "@richardmcquiston01/lms-package-maker-conformance": ["@richardmcquiston01/lms-package-maker-conformance@workspace:packages/conformance"],
+
+    "@richardmcquiston01/lms-package-maker-e2e": ["@richardmcquiston01/lms-package-maker-e2e@workspace:packages/e2e"],
 
     "@richardmcquiston01/lms-package-maker-exporter-html5": ["@richardmcquiston01/lms-package-maker-exporter-html5@workspace:packages/exporter-html5"],
 

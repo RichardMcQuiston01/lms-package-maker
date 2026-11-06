@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 /**
@@ -15,6 +16,9 @@ export const SERVER_EXTERNAL_PACKAGES: string[] = [
 const nextConfig: NextConfig = {
   serverExternalPackages: SERVER_EXTERNAL_PACKAGES,
   output: 'standalone',
+  // Trace files from the repository root so the standalone output includes the
+  // workspace packages (and lands at apps/web/server.js).
+  outputFileTracingRoot: path.resolve(import.meta.dirname, '../..'),
 };
 
 export default nextConfig;
