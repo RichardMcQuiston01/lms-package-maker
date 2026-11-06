@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { AuthForm } from '../../components/AuthForm';
 import { getCurrentUser } from '../../lib/auth/current';
@@ -8,10 +8,15 @@ import { getServices } from '../../lib/services';
 export const dynamic = 'force-dynamic';
 
 export default async function SignUpPage(): Promise<ReactNode> {
+  const { accounts } = getServices();
+  if (accounts === null) {
+    // Another identity provider signs people in; this app has no sign-up page.
+    notFound();
+  }
   if ((await getCurrentUser()) !== null) {
     redirect('/');
   }
-  if (!(await getServices().auth.isSignUpOpen())) {
+  if (!(await accounts.isSignUpOpen())) {
     return (
       <main className="mx-auto max-w-sm p-8">
         <h1 className="text-2xl font-semibold">Sign-up is closed</h1>

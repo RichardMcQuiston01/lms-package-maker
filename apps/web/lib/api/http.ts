@@ -71,3 +71,11 @@ export async function readJsonBody(
     };
   }
 }
+
+/** Answer for the built-in sign-in routes when another identity provider is in use. */
+export function builtInSignInOff(providerName: string): Response {
+  return errorResponse(
+    404,
+    `Built-in sign-in is turned off because the '${providerName}' identity provider is in use. Sign in through that provider instead.`
+  );
+}

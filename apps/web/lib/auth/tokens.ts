@@ -46,7 +46,8 @@ export function signPreviewToken(
     userId,
     expiresAtMs
   ).toString('base64url');
-  return `${expiresAtMs}.${userId}.${signature}`;
+  // The owner id is encoded because hosts may use any text, including dots and slashes.
+  return `${expiresAtMs}.${Buffer.from(userId, 'utf8').toString('base64url')}.${signature}`;
 }
 
 export function verifyPreviewToken(
@@ -60,7 +61,9 @@ export function verifyPreviewToken(
     return { ok: false, errors: ['the preview link is malformed'] };
   }
   const expiresAtMs = Number(parts[0]);
-  const userId: string = parts[1] ?? '';
+  const userId: string = Buffer.from(parts[1] ?? '', 'base64url').toString(
+    'utf8'
+  );
   const signature: Buffer = Buffer.from(parts[2] ?? '', 'base64url');
   if (!Number.isFinite(expiresAtMs)) {
     return { ok: false, errors: ['the preview link is malformed'] };

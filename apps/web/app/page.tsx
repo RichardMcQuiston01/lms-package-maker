@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { NewProjectForm } from '../components/NewProjectForm';
 import { SignOutButton } from '../components/SignOutButton';
 import { getCurrentUser } from '../lib/auth/current';
+import { redirectToSignIn } from '../lib/identity/redirect';
 import { getServices } from '../lib/services';
 
 export const dynamic = 'force-dynamic';
@@ -11,16 +11,26 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage(): Promise<ReactNode> {
   const user = await getCurrentUser();
   if (user === null) {
-    redirect('/sign-in');
+    redirectToSignIn();
   }
-  const listed = await getServices().projects.list(user.id);
+  const services = getServices();
+  const listed = await services.projects.list(user.id);
   return (
     <main className="mx-auto max-w-3xl p-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-3xl font-semibold">LMS Package Maker</h1>
         <span className="flex items-center gap-3 text-sm text-slate-600">
           {user.displayName}
-          <SignOutButton />
+          {services.accounts !== null ? (
+            <SignOutButton />
+          ) : services.identity.signOutUrl !== null ? (
+            <a
+              href={services.identity.signOutUrl}
+              className="rounded-md border border-slate-300 px-3 py-1 hover:bg-slate-100"
+            >
+              Sign out
+            </a>
+          ) : null}
         </span>
       </div>
       <p className="mt-2 text-slate-600">

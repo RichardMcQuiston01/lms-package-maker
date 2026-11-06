@@ -1,0 +1,32 @@
+{
+  "name": "@richardmcquiston01/lms-package-maker-identity",
+  "version": "0.1.0",
+  "description": "A small contract for telling the authoring app who is signed in, plus ready-made providers",
+  "private": true,
+  "license": "Apache-2.0",
+  "author": "Richard McQuiston",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RichardMcQuiston01/lms-package-maker.git",
+    "directory": "packages/identity"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  }
+}

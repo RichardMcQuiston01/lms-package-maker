@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "build:bundles": "bun scripts/build-bundles.ts",
-    "build": "bun run build:bundles && tsc -b packages/model packages/runtime packages/player packages/exporters packages/exporter-html5 packages/exporter-scorm12",
+    "build": "bun run build:bundles && tsc -b packages/identity packages/model packages/runtime packages/player packages/exporters packages/exporter-html5 packages/exporter-scorm12",
     "typecheck": "bun run build && tsc -p tsconfig.test.json && bun run --cwd apps/web typecheck",
     "test": "bun run build && bun test packages apps/web scripts",
     "format": "prettier --write .",

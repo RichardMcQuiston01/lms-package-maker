@@ -13,12 +13,13 @@ model Project {
   name        String
   description String   @default("")
   courseJson  Json     @map("course_json")
-  /// Null only for projects made before sign-in existed; the first account claims them.
-  ownerId     String?  @map("owner_id") @db.Uuid
+  /// The identity provider's id for the owner. Opaque text: the app never looks inside it,
+  /// so hosts can use their own ids. Null only for projects made before sign-in existed;
+  /// the first built-in account claims them.
+  ownerId     String?  @map("owner_id")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  owner   User?           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   exports PackageExport[]
   media   Media[]
 
@@ -53,7 +54,6 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   sessions Session[]
-  projects Project[]
 
   @@map("user")
 }

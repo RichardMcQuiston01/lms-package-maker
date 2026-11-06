@@ -21,6 +21,7 @@ HTML5 and SCORM 1.2 import today.
 
 - [x] Next.js app + Prisma: projects, modules and pages (HTML pages, sanitised on save)
 - [x] Sign-in with email and password; courses are private to their owner
+- [x] Pluggable identity (`packages/identity`): built-in accounts, trusted proxy header, single user, or your own provider
 - [x] Media uploads (images, audio, video) stored through the storage adapters; 25 MB per file
 - [x] Live preview using the real runtime (sandboxed frame, last saved version)
 - [x] Export SCORM 1.2 and HTML5 downloads from the editor

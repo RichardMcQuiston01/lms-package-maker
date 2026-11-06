@@ -110,6 +110,36 @@ describe('Prisma project repository', () => {
     }
   );
 
+  testIf(available)(
+    'accepts an owner id from any identity provider, with no account row behind it',
+    async () => {
+      const repository = createPrismaRepository(client as PrismaClient);
+      const id: string = crypto.randomUUID();
+      const hostOwner = `header:ada.lovelace+${id}@example.com`;
+      try {
+        const created = await repository.create(
+          id,
+          hostOwner,
+          course(id, 'Hosted')
+        );
+        expect(created.ok).toBe(true);
+        const read = await repository.get(id, hostOwner);
+        expect(read.ok && read.value?.name).toBe('Hosted');
+        const listed = await repository.list(hostOwner);
+        expect(listed.ok && listed.value.map((entry) => entry.id)).toEqual([
+          id,
+        ]);
+        // A different id, even a prefix of it, is a different owner.
+        expect(await repository.get(id, 'header:ada.lovelace')).toEqual({
+          ok: true,
+          value: null,
+        });
+      } finally {
+        await client?.project.deleteMany({ where: { id } });
+      }
+    }
+  );
+
   testIf(available)('keeps projects private to their owner', async () => {
     const repository = createPrismaRepository(client as PrismaClient);
     const id: string = crypto.randomUUID();
