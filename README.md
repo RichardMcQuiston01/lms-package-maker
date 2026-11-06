@@ -78,9 +78,9 @@ The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL databas
 Add questions to any page in the editor (a page with questions becomes a quiz page). A question has one right answer or several, is worth 1 to 100 points, and can show an explanation after the learner answers. Pick how the course finishes under Completion:
 
 - **Every page viewed** (default): questions are practice. The score is still reported.
-- **Quiz passed**: set a pass mark in percent. When every question has been answered the course is *passed* or *failed* by the best score of all attempts; learners can press Try again, and a later pass upgrades a failed result. The score goes to the LMS as 0 to 100 (`cmi.core.score.*`), and the SCORM manifest declares the pass mark (`adlcp:masteryscore`).
+- **Quiz passed**: set a pass mark in percent. Each time the learner has answered every question, the package reports that attempt as it happened: its score (0 to 100, `cmi.core.score.*`) and *passed* or *failed*. Learners can press Try again, and every completed attempt is reported, including a worse one after a pass. The package never decides which attempt counts; the system that records the data does. If you want the best attempt, implement that where results are stored. The SCORM manifest declares the pass mark (`adlcp:masteryscore`).
 
-Scoring is exact: a pick-several question is right only when the learner picks exactly the right set, with no partial credit. Answers, the best score and visited pages are saved in the LMS's suspend data, so learners resume where they left off.
+Scoring is exact: a pick-several question is right only when the learner picks exactly the right set, with no partial credit. Answers, the latest score and visited pages are saved in the LMS's suspend data, so learners resume where they left off.
 
 The right answers travel inside the package so it can mark answers without a server, which is how SCORM 1.2 content works. A determined learner can read them in the page source; use an LMS-side assessment if that matters.
 

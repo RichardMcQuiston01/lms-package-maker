@@ -9,17 +9,34 @@ import {
   type Score,
 } from './types.js';
 
-/** Higher rank wins: a finished lesson never goes back to incomplete. */
-const STATUS_RANK: Readonly<Record<LessonStatus, number>> = {
-  incomplete: 0,
-  completed: 1,
-  failed: 1,
-  passed: 2,
-};
+/** True once the lesson has reached a final-looking state. */
+function isFinished(status: LessonStatus): boolean {
+  return status !== 'incomplete';
+}
+
+/**
+ * Decides whether a status change is sent on. Merely starting or visiting
+ * must never undo a finished lesson, and a plain "completed" must not erase a
+ * pass or fail. A pass or fail, though, is always sent, including a fail after
+ * an earlier pass: the system that records the result decides which attempt
+ * counts, so the content reports what happened.
+ */
+function shouldSend(current: LessonStatus | null, next: LessonStatus): boolean {
+  if (current === null) {
+    return true;
+  }
+  if (next === 'incomplete') {
+    return !isFinished(current);
+  }
+  if (next === 'completed') {
+    return current === 'incomplete' || current === 'completed';
+  }
+  return true;
+}
 
 /**
  * Wraps an adapter with the rules every standard shares: init once, never
- * regress a finished status, clamp progress and track session time.
+ * un-finish a finished lesson, clamp progress and track session time.
  *
  * @param adapter - The LMS connection to use.
  * @param now - Clock in milliseconds, injectable for tests.
@@ -48,10 +65,7 @@ export function createRuntime(
     if (!active.ok) {
       return active;
     }
-    if (
-      currentStatus !== null &&
-      STATUS_RANK[status] < STATUS_RANK[currentStatus]
-    ) {
+    if (!shouldSend(currentStatus, status)) {
       return ok();
     }
     const result: Result<null> = adapter.setStatus(status);

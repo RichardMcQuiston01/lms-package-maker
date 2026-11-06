@@ -88,3 +88,47 @@ describe('selectAdapter', () => {
     expect(selectAdapter({}).name).toBe('standalone');
   });
 });
+
+describe('status changes', () => {
+  function recordingRuntime() {
+    const sent: string[] = [];
+    const runtime = createRuntime({
+      ...createStandaloneAdapter(),
+      setStatus: (status) => {
+        sent.push(status);
+        return { ok: true, value: null };
+      },
+    });
+    runtime.init();
+    sent.length = 0;
+    return { runtime, sent };
+  }
+
+  test('reports a fail after an earlier pass, and a pass after a fail', () => {
+    const { runtime, sent } = recordingRuntime();
+    runtime.pass();
+    runtime.fail();
+    runtime.pass();
+    runtime.fail();
+    // The system that records the result decides which attempt counts.
+    expect(sent).toEqual(['passed', 'failed', 'passed', 'failed']);
+  });
+
+  test('never un-finishes a finished lesson by starting or viewing', () => {
+    const { runtime, sent } = recordingRuntime();
+    runtime.fail();
+    expect(runtime.complete().ok).toBe(true);
+    expect(sent).toEqual(['failed']);
+    const second = recordingRuntime();
+    second.runtime.complete();
+    second.runtime.pass();
+    expect(second.sent).toEqual(['completed', 'passed']);
+  });
+
+  test('a plain completed does not erase a pass or a fail', () => {
+    const { runtime, sent } = recordingRuntime();
+    runtime.pass();
+    runtime.complete();
+    expect(sent).toEqual(['passed']);
+  });
+});
