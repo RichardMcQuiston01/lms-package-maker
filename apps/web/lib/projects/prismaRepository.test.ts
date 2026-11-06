@@ -1,0 +1,126 @@
+import { afterAll, describe, expect } from 'bun:test';
+import type { CourseModel } from '@richardmcquiston01/lms-package-maker-model';
+import { PrismaClient } from '@prisma/client';
+import { testIf } from '../testSupport';
+import { createPrismaRepository } from './prismaRepository';
+
+/**
+ * Runs against a real PostgreSQL database (DATABASE_URL, migrations applied).
+ * Locally it is skipped without one; on CI a missing database is an error.
+ */
+const databaseUrl: string | undefined = process.env['DATABASE_URL'];
+if ((databaseUrl === undefined || databaseUrl === '') && process.env['CI']) {
+  throw new Error(
+    'DATABASE_URL must be set on CI so the Prisma repository is tested'
+  );
+}
+const available: boolean = databaseUrl !== undefined && databaseUrl !== '';
+const client: PrismaClient | null = available ? new PrismaClient() : null;
+
+const course = (id: string, title: string): CourseModel => ({
+  modelVersion: 1,
+  id,
+  title,
+  description: 'd',
+  language: 'en',
+  completion: { kind: 'viewAll' },
+  modules: [
+    { id: 'm', title: 'M', pages: [{ id: 'p', title: 'P', html: '<p>x</p>' }] },
+  ],
+});
+
+afterAll(async (): Promise<void> => {
+  await client?.$disconnect();
+});
+
+describe('Prisma project repository', () => {
+  testIf(available)(
+    'creates, reads, updates, lists and records exports',
+    async () => {
+      const repository = createPrismaRepository(client as PrismaClient);
+      const id: string = crypto.randomUUID();
+      try {
+        const created = await repository.create(id, course(id, 'First'));
+        expect(created.ok && created.value.name).toBe('First');
+
+        const read = await repository.get(id);
+        expect(read.ok && read.value?.course.modules[0]?.pages[0]?.html).toBe(
+          '<p>x</p>'
+        );
+
+        const updated = await repository.update(id, course(id, 'Second'));
+        expect(updated.ok && updated.value?.name).toBe('Second');
+        expect(
+          updated.ok &&
+            updated.value !== null &&
+            updated.value.updatedAt >= updated.value.createdAt
+        ).toBe(true);
+
+        const listed = await repository.list();
+        expect(listed.ok && listed.value.some((entry) => entry.id === id)).toBe(
+          true
+        );
+
+        const exportId: string = crypto.randomUUID();
+        const recorded = await repository.recordExport({
+          id: exportId,
+          projectId: id,
+          standard: 'scorm12',
+          storageKey: `export:${exportId}`,
+          byteSize: 10,
+        });
+        expect(recorded.ok).toBe(true);
+        const exports = await repository.listExports(id);
+        expect(exports.ok && exports.value.length).toBe(1);
+
+        const missing = await repository.update(
+          crypto.randomUUID(),
+          course(id, 'X')
+        );
+        expect(missing).toEqual({ ok: true, value: null });
+      } finally {
+        await client?.project.deleteMany({ where: { id } });
+      }
+    }
+  );
+
+  testIf(available)(
+    'says what is wrong when an export has no project',
+    async () => {
+      const repository = createPrismaRepository(client as PrismaClient);
+      const result = await repository.recordExport({
+        id: crypto.randomUUID(),
+        projectId: crypto.randomUUID(),
+        standard: 'html5',
+        storageKey: 'x',
+        byteSize: 1,
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.errors[0]).toContain(
+          'could not record the export of project'
+        );
+      }
+    }
+  );
+
+  testIf(available)(
+    'reports a stored course that is no longer valid',
+    async () => {
+      const repository = createPrismaRepository(client as PrismaClient);
+      const id: string = crypto.randomUUID();
+      try {
+        await (client as PrismaClient).project.create({
+          data: { id, name: 'Broken', courseJson: { modelVersion: 99 } },
+        });
+        const read = await repository.get(id);
+        expect(read.ok).toBe(false);
+        if (!read.ok) {
+          expect(read.errors[0]).toContain('no longer valid');
+        }
+      } finally {
+        await client?.project.deleteMany({ where: { id } });
+      }
+    }
+  );
+});

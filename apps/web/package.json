@@ -8,23 +8,29 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "prisma generate && tsc --noEmit",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^6",
     "@richardmcquiston01/error-log-adapter": "^0.15.1",
+    "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
+    "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
     "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
     "@richardmcquiston01/lms-package-maker-model": "workspace:*",
     "@richardmcquiston01/storage-adapters": "^0.23.0",
     "next": "^15",
     "react": "^19",
-    "react-dom": "^19"
+    "react-dom": "^19",
+    "sanitize-html": "^2.18.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/sanitize-html": "^2.16.2",
+    "fflate": "^0.8.3",
     "postcss": "^8.5.32",
     "prisma": "^6",
     "tailwindcss": "^4",

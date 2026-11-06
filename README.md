@@ -69,6 +69,10 @@ bun run typecheck   # packages and web app
 cd apps/web && bunx prisma migrate dev && bun run dev
 ```
 
+Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2 or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
+
+The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one. The app has no sign-in yet, so run it on a trusted network only.
+
 Stack: Next.js, Prisma, TailwindCSS. Stored files use [storage-adapters](https://github.com/RichardMcQuiston01/storage-adapters) and errors go through [error-log-adapter](https://github.com/RichardMcQuiston01/error-log-adapter), so both sinks can be swapped without changing application code.
 
 ### Examples
