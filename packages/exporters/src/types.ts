@@ -15,5 +15,13 @@ export type ExportStandard =
  */
 export interface Exporter {
   readonly standard: ExportStandard;
-  export(course: CourseModel): Result<PackageFiles>;
+  export(course: CourseModel, options?: ExportOptions): Result<PackageFiles>;
+}
+
+export interface ExportOptions {
+  /**
+   * Extra files to place in the package, such as uploaded media. Paths must
+   * start with `media/`. The course HTML refers to them by those paths.
+   */
+  readonly assets?: PackageFiles;
 }

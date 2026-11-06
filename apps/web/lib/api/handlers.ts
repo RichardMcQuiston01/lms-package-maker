@@ -23,6 +23,7 @@ const PREVIEW_CONTENT_SECURITY_POLICY = [
   "script-src 'self'",
   "style-src 'self'",
   'img-src * data:',
+  "media-src 'self'",
   "frame-ancestors 'self'",
 ].join('; ');
 

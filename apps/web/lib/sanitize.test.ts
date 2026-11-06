@@ -42,4 +42,30 @@ describe('sanitizePageHtml', () => {
       sanitizePageHtml('<a href="data:text/html,<b>x</b>">x</a>')
     ).not.toContain('data:');
   });
+
+  test('keeps references to uploaded media on images, audio and video', () => {
+    const id = '0b6f2f4e-1111-4111-8111-aaaaaaaaaaaa';
+    const clean: string = sanitizePageHtml(
+      `<img src="media:${id}" alt="Cat"><audio src="media:${id}"></audio><video controls><source src="media:${id}" type="video/mp4"></video>`
+    );
+    expect(clean).toContain(`<img src="media:${id}" alt="Cat" />`);
+    expect(clean).toContain(`<audio src="media:${id}"`);
+    expect(clean).toContain(`<source src="media:${id}" type="video/mp4">`);
+  });
+
+  test('always shows player controls and never autoplays', () => {
+    const clean: string = sanitizePageHtml(
+      '<audio autoplay loop onplay="x()" src="media:0b6f2f4e-1111-4111-8111-aaaaaaaaaaaa"></audio>'
+    );
+    expect(clean).toContain('controls="controls"');
+    expect(clean).not.toContain('autoplay');
+    expect(clean).not.toContain('onplay');
+  });
+
+  test('refuses outside addresses for audio and video', () => {
+    const clean: string = sanitizePageHtml(
+      '<audio src="https://evil.test/a.mp3"></audio><video src="http://evil.test/v.mp4"></video>'
+    );
+    expect(clean).not.toContain('evil.test');
+  });
 });

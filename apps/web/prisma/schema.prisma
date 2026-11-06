@@ -20,6 +20,7 @@ model Project {
 
   owner   User?           @relation(fields: [ownerId], references: [id], onDelete: Restrict)
   exports PackageExport[]
+  media   Media[]
 
   @@index([ownerId])
   @@map("project")
@@ -71,4 +72,24 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("session")
+}
+
+/// An uploaded image, audio or video file. The bytes live in storage under `storageKey`.
+model Media {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @map("project_id") @db.Uuid
+  /// What the author uploaded, cleaned for display only; never used as a path.
+  fileName    String   @map("file_name")
+  /// Decided from the file's first bytes, not from what the browser claimed.
+  contentType String   @map("content_type")
+  byteSize    Int      @map("byte_size")
+  sha256      String
+  storageKey  String   @unique @map("storage_key")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("media")
 }

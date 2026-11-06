@@ -1,4 +1,4 @@
-import type { ServiceResult } from '../projects/service';
+import type { ServiceResult } from '../serviceResult';
 
 export interface ApiError {
   readonly error: string;
@@ -42,6 +42,8 @@ export function failureResponse(
       );
     case 'notFound':
       return errorResponse(404, first, failure.errors);
+    case 'tooLarge':
+      return errorResponse(413, first, failure.errors);
     case 'failed':
       return errorResponse(
         500,

@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { CourseEditor } from '../../../components/CourseEditor';
 import { isProjectId } from '../../../lib/api/http';
+import { toMediaJson } from '../../../lib/api/mediaHandlers';
 import { getCurrentUser } from '../../../lib/auth/current';
 import { getServices } from '../../../lib/services';
 
@@ -36,10 +37,21 @@ export default async function ProjectPage({
       </main>
     );
   }
+  const media = await services.media.list(id, user.id);
+  if (!media.ok) {
+    return (
+      <main className="mx-auto max-w-3xl p-8">
+        <p role="alert" className="rounded-md bg-red-50 p-3 text-red-800">
+          Could not load this course's media: {media.errors.join(' ')}
+        </p>
+      </main>
+    );
+  }
   return (
     <CourseEditor
       projectId={found.value.id}
       initialCourse={found.value.course}
+      initialMedia={media.value.map(toMediaJson)}
       initialPreviewUrl={services.previewAccess.urlFor(found.value.id, user.id)}
     />
   );

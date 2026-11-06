@@ -9,6 +9,27 @@ import { escapeHtml, jsonForScript } from './escape.js';
 import { playerClientSource } from './playerClientSource.generated.js';
 import { playerCss } from './styles.js';
 
+export interface PlayerOptions {
+  /** Extra files for the package, such as uploaded media. Paths start with `media/`. */
+  readonly assets?: ReadonlyMap<string, Uint8Array>;
+}
+
+const ASSET_PATH_PATTERN = /^media\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
+
+function checkAssetPaths(
+  assets: ReadonlyMap<string, Uint8Array> | undefined
+): string[] {
+  const errors: string[] = [];
+  for (const path of assets?.keys() ?? []) {
+    if (!ASSET_PATH_PATTERN.test(path) || path.split('/').includes('..')) {
+      errors.push(
+        `asset path '${path}' must start with 'media/' and use only letters, digits, '.', '_', '-' and '/'`
+      );
+    }
+  }
+  return errors;
+}
+
 /** Files of the player, keyed by forward-slash relative path. */
 export type PlayerFiles = Map<string, Uint8Array>;
 
@@ -79,8 +100,14 @@ function renderPages(course: CourseModel): string {
  * Builds the static player: `index.html`, a stylesheet, the LMS runtime and
  * the player script. Standard-specific exporters add their own descriptor.
  */
-export function buildPlayerFiles(course: CourseModel): Result<PlayerFiles> {
-  const errors: readonly string[] = checkCourse(course);
+export function buildPlayerFiles(
+  course: CourseModel,
+  options: PlayerOptions = {}
+): Result<PlayerFiles> {
+  const errors: string[] = [
+    ...checkCourse(course),
+    ...checkAssetPaths(options.assets),
+  ];
   if (errors.length > 0) {
     return { ok: false, errors };
   }
@@ -124,5 +151,8 @@ ${renderPages(course)}
     ['assets/runtime.js', encoder.encode(runtimeSource)],
     ['assets/player.js', encoder.encode(playerClientSource)],
   ]);
+  for (const [path, bytes] of options.assets ?? []) {
+    files.set(path, bytes);
+  }
   return { ok: true, value: files };
 }

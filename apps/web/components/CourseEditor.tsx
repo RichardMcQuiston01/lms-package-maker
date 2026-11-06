@@ -28,7 +28,10 @@ import {
   updateCourseDetails,
   updatePage,
 } from '../lib/courseEdit';
+import type { MediaJson } from '../lib/api/mediaHandlers';
+import { insertAt } from '../lib/htmlSnippets';
 import { newClientId } from '../lib/ids';
+import { MediaPanel } from './MediaPanel';
 import { OutlinePanel, type OutlineActions } from './OutlinePanel';
 import { PagePanel } from './PagePanel';
 import { PreviewPane } from './PreviewPane';
@@ -37,6 +40,7 @@ interface CourseEditorProps {
   readonly projectId: string;
   readonly initialCourse: CourseModel;
   readonly initialPreviewUrl: string;
+  readonly initialMedia: readonly MediaJson[];
 }
 
 type StatusMessage =
@@ -54,6 +58,7 @@ export function CourseEditor({
   projectId,
   initialCourse,
   initialPreviewUrl,
+  initialMedia,
 }: CourseEditorProps): ReactNode {
   const [course, setCourse] = useState<CourseModel>(initialCourse);
   const [savedCourse, setSavedCourse] = useState<CourseModel>(initialCourse);
@@ -62,6 +67,7 @@ export function CourseEditor({
   );
   const [status, setStatus] = useState<StatusMessage>({ kind: 'idle' });
   const [previewUrl, setPreviewUrl] = useState<string>(initialPreviewUrl);
+  const pageTextarea = useRef<HTMLTextAreaElement>(null);
   const courseRef = useRef<CourseModel>(course);
   courseRef.current = course;
 
@@ -146,6 +152,26 @@ export function CourseEditor({
       null
     );
   }, [course, selectedPageId]);
+
+  /** Puts HTML into the open page at the caret, replacing any selection. */
+  function insertIntoPage(html: string): void {
+    if (selectedPage === null) {
+      setStatus({
+        kind: 'error',
+        message: 'Select a page before inserting media.',
+      });
+      return;
+    }
+    const textarea: HTMLTextAreaElement | null = pageTextarea.current;
+    const start: number = textarea?.selectionStart ?? selectedPage.html.length;
+    const end: number = textarea?.selectionEnd ?? start;
+    const inserted = insertAt(selectedPage.html, start, end, html);
+    applyEdit(updatePage(course, selectedPage.id, { html: inserted.text }));
+    requestAnimationFrame((): void => {
+      textarea?.focus();
+      textarea?.setSelectionRange(inserted.caret, inserted.caret);
+    });
+  }
 
   const actions: OutlineActions = {
     selectPage: setSelectedPageId,
@@ -257,10 +283,16 @@ export function CourseEditor({
             selectedPageId={selectedPageId}
             actions={actions}
           />
+          <MediaPanel
+            projectId={projectId}
+            initialMedia={initialMedia}
+            onInsert={insertIntoPage}
+          />
         </aside>
         <main>
           <PagePanel
             page={selectedPage}
+            textareaRef={pageTextarea}
             onTitleChange={(title): void => {
               if (selectedPageId !== null)
                 applyEdit(updatePage(course, selectedPageId, { title }));

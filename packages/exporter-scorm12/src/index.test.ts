@@ -64,4 +64,38 @@ describe('scorm12Exporter', () => {
     });
     expect(result.ok).toBe(false);
   });
+
+  test('puts media in the package and lists it in the manifest', () => {
+    const result = scorm12Exporter.export(course, {
+      assets: new Map([['media/a.png', new Uint8Array([1, 2, 3])]]),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.get('media/a.png')).toEqual(
+        new Uint8Array([1, 2, 3])
+      );
+      const manifest: string = new TextDecoder().decode(
+        result.value.get('imsmanifest.xml')
+      );
+      expect(manifest).toContain('<file href="media/a.png"/>');
+    }
+  });
+
+  test('refuses asset paths that could escape the package', () => {
+    for (const path of [
+      '../evil.png',
+      '/abs.png',
+      'assets/player.js',
+      'media/../x',
+      'media/a b.png',
+    ]) {
+      const result = scorm12Exporter.export(course, {
+        assets: new Map([[path, new Uint8Array([1])]]),
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.errors[0]).toContain(`'${path}'`);
+      }
+    }
+  });
 });

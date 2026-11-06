@@ -72,6 +72,18 @@ describe('SCORM 1.2 manifest schema validation', () => {
   });
 });
 
+describe('manifest with media', () => {
+  test('lists the media files and still validates against the schemas', async () => {
+    const manifest: string = buildScorm12Manifest(course, [
+      'media/a.png',
+      'media/b.mp4',
+    ]);
+    expect(manifest).toContain('<file href="media/a.png"/>');
+    expect(manifest).toContain('<file href="media/b.mp4"/>');
+    expect(await validate(manifest)).toEqual([]);
+  });
+});
+
 describe('schema files in the package', () => {
   test('all four are written at the package root', () => {
     const result = scorm12Exporter.export(course);

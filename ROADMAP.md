@@ -21,7 +21,7 @@ HTML5 and SCORM 1.2 import today.
 
 - [x] Next.js app + Prisma: projects, modules and pages (HTML pages, sanitised on save)
 - [x] Sign-in with email and password; courses are private to their owner
-- [ ] Media uploads (images, audio, video) using the storage adapters
+- [x] Media uploads (images, audio, video) stored through the storage adapters; 25 MB per file
 - [x] Live preview using the real runtime (sandboxed frame, last saved version)
 - [x] Export SCORM 1.2 and HTML5 downloads from the editor
 - [ ] Quizzes with scoring and completion rules

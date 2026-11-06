@@ -1,16 +1,19 @@
 'use client';
 
 import type { Page } from '@richardmcquiston01/lms-package-maker-model';
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 
 interface PagePanelProps {
   readonly page: Page | null;
+  /** Lets the editor insert text where the caret is. */
+  readonly textareaRef: RefObject<HTMLTextAreaElement | null>;
   readonly onTitleChange: (title: string) => void;
   readonly onHtmlChange: (html: string) => void;
 }
 
 export function PagePanel({
   page,
+  textareaRef,
   onTitleChange,
   onHtmlChange,
 }: PagePanelProps): ReactNode {
@@ -32,6 +35,7 @@ export function PagePanel({
       <label className="block">
         <span className="text-sm font-medium">Page content (HTML)</span>
         <textarea
+          ref={textareaRef}
           value={page.html}
           onChange={(event): void => onHtmlChange(event.target.value)}
           rows={16}

@@ -5,4 +5,5 @@ export {
   PLAYER_ASSET_PATHS,
   PLAYER_ENTRY_PATH,
   type PlayerFiles,
+  type PlayerOptions,
 } from './html.js';

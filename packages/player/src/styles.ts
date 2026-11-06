@@ -11,6 +11,8 @@ body { margin: 0; font: 16px/1.6 system-ui, sans-serif; display: grid; grid-temp
 .lpm-nav button[aria-current="page"] { background: var(--accent); color: #fff; }
 .lpm-main { padding: 1.5rem 2rem; max-width: 60rem; }
 .lpm-main progress { width: 100%; height: .5rem; }
+.lpm-page img, .lpm-page video { max-width: 100%; height: auto; }
+.lpm-page audio { width: 100%; }
 .lpm-controls { display: flex; justify-content: space-between; margin-top: 2rem; }
 .lpm-controls button { padding: .5rem 1rem; border: 1px solid #8886; border-radius: .375rem; background: none; color: inherit; font: inherit; cursor: pointer; }
 #lpm-status { min-height: 1.5rem; opacity: .8; }

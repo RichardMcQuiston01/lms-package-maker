@@ -72,4 +72,47 @@ describe('reactive-lms import', () => {
       expect(parsed.entryHref).toBe('index.html');
     }
   );
+
+  testIf(reactiveLms !== null)(
+    'a SCORM package with media is still read, and every listed file is in the zip',
+    () => {
+      const lms = reactiveLms as ReactiveLms;
+      const png = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0,
+      ]);
+      const exported = scorm12Exporter.export(
+        {
+          ...sampleCourse,
+          modules: [
+            {
+              id: 'm1',
+              title: 'Intro',
+              pages: [
+                {
+                  id: 'p1',
+                  title: 'One',
+                  html: '<img src="media/pic.png" alt="">',
+                },
+              ],
+            },
+          ],
+        },
+        { assets: new Map([['media/pic.png', png]]) }
+      );
+      if (!exported.ok) throw new Error(exported.errors.join('; '));
+      const zipped = zipPackage(exported.value as PackageFiles);
+      if (!zipped.ok) throw new Error(zipped.errors.join('; '));
+      const index: PackageFileIndex = lms.createZipFileIndex(zipped.value);
+      expect(lms.detectPackageType(index)).toBe('scorm_12');
+      expect(lms.parseImsmanifest(index).entryHref).toBe('index.html');
+      expect(index.has('media/pic.png')).toBe(true);
+      const manifest: string = new TextDecoder().decode(
+        index.read('imsmanifest.xml')
+      );
+      expect(manifest).toContain('<file href="media/pic.png"/>');
+      for (const match of manifest.matchAll(/<file href="([^"]+)"/g)) {
+        expect(index.has(match[1] ?? '')).toBe(true);
+      }
+    }
+  );
 });

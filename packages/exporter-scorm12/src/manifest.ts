@@ -14,10 +14,17 @@ export function toIdentifier(value: string): string {
  * Builds a SCORM 1.2 `imsmanifest.xml` with one SCO that launches the whole
  * course. Module and page navigation happens inside the player.
  */
-export function buildScorm12Manifest(course: CourseModel): string {
+export function buildScorm12Manifest(
+  course: CourseModel,
+  assetPaths: readonly string[] = []
+): string {
   const courseId: string = toIdentifier(course.id);
   const title: string = escapeHtml(course.title);
-  const files: string = [PLAYER_ENTRY_PATH, ...PLAYER_ASSET_PATHS]
+  const files: string = [
+    PLAYER_ENTRY_PATH,
+    ...PLAYER_ASSET_PATHS,
+    ...assetPaths,
+  ]
     .map((path: string): string => `      <file href="${escapeHtml(path)}"/>`)
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
