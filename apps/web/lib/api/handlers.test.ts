@@ -196,3 +196,38 @@ describe('preview', () => {
     expect(response.status).toBe(403);
   });
 });
+
+describe('owners from any identity provider', () => {
+  const HOST_OWNER = 'header:ada.lovelace@example.com';
+
+  test('a host id with dots and a colon works from create to preview and export', async () => {
+    const ctx = createTestServices();
+    const created = await createProject(
+      ctx.service,
+      HOST_OWNER,
+      jsonRequest({ title: 'Hosted' })
+    );
+    expect(created.status).toBe(201);
+    const id = ((await created.json()) as { project: { id: string } }).project
+      .id;
+
+    const link = await previewLink(ctx.service, access, HOST_OWNER, id);
+    const url = ((await link.json()) as { url: string }).url;
+    const token = url.split('/preview/')[1]?.split('/')[0] ?? '';
+    const preview = await previewProject(ctx.service, access, id, token, []);
+    expect(preview.status).toBe(200);
+
+    expect(
+      (await exportProject(ctx.service, HOST_OWNER, id, 'scorm12')).status
+    ).toBe(200);
+    const listed = (await (
+      await listProjects(ctx.service, HOST_OWNER)
+    ).json()) as { projects: unknown[] };
+    expect(listed.projects).toHaveLength(1);
+    // Someone else, even one with a similar id, sees nothing.
+    expect((await getProject(ctx.service, 'header:ada', id)).status).toBe(404);
+    expect(
+      (await getProject(ctx.service, 'sso:ada.lovelace@example.com', id)).status
+    ).toBe(404);
+  });
+});

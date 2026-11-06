@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { createBuiltInIdentityProvider } from '../identity/builtIn';
 import { createTestAuth } from '../testSupport';
 import { signInHandler, signOutHandler, signUpHandler } from './authHandlers';
 import { authenticateRequest } from './session';
@@ -45,7 +46,10 @@ describe('auth handlers', () => {
     const next = new Request('http://app.test/api/projects', {
       headers: { cookie: cookieOf(response) },
     });
-    const who = await authenticateRequest(auth.service, next);
+    const who = await authenticateRequest(
+      createBuiltInIdentityProvider(auth.service),
+      next
+    );
     expect(who.ok && who.user.displayName).toBe('Ada');
   });
 
@@ -53,7 +57,7 @@ describe('auth handlers', () => {
     const auth = createTestAuth();
     for (const headers of [{}, { cookie: 'lpm_session=forged' }]) {
       const who = await authenticateRequest(
-        auth.service,
+        createBuiltInIdentityProvider(auth.service),
         new Request('http://app.test/api/projects', { headers })
       );
       expect(who.ok).toBe(false);
@@ -81,7 +85,10 @@ describe('auth handlers', () => {
         host: 'app.test',
       }
     );
-    const who = await authenticateRequest(auth.service, forged);
+    const who = await authenticateRequest(
+      createBuiltInIdentityProvider(auth.service),
+      forged
+    );
     expect(who.ok).toBe(false);
     if (!who.ok) {
       expect(who.response.status).toBe(403);
@@ -171,7 +178,7 @@ describe('auth handlers', () => {
     expect(out.status).toBe(200);
     expect(out.headers.get('set-cookie')).toContain('lpm_session=;');
     const who = await authenticateRequest(
-      auth.service,
+      createBuiltInIdentityProvider(auth.service),
       new Request('http://app.test/api/projects', { headers: { cookie } })
     );
     expect(who.ok).toBe(false);

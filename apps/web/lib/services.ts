@@ -6,6 +6,8 @@ import { createErrorLog } from './errorLog';
 import { createPrismaAuthRepository } from './auth/prismaAuthRepository';
 import { createRateLimiter } from './auth/rateLimiter';
 import { createAuthService, type AuthService } from './auth/service';
+import { createIdentitySetup } from './identity/fromEnvironment';
+import type { IdentityProvider } from '@richardmcquiston01/lms-package-maker-identity';
 import { createPreviewAccess, type PreviewAccess } from './auth/tokens';
 import { createMediaService, type MediaService } from './media/service';
 import { createPrismaMediaRepository } from './media/prismaMediaRepository';
@@ -14,7 +16,10 @@ import { createProjectService, type ProjectService } from './projects/service';
 import { createFileStorage } from './storage';
 
 export interface Services {
-  readonly auth: AuthService;
+  /** Decides who is signed in. */
+  readonly identity: IdentityProvider;
+  /** The app's own sign-in screens; null when another identity provider is used. */
+  readonly accounts: AuthService | null;
   readonly projects: ProjectService;
   readonly media: MediaService;
   readonly previewAccess: PreviewAccess;
@@ -38,8 +43,8 @@ export function getServices(): Services {
       errorLog,
       newId,
     });
-    globalForServices.services = {
-      auth: createAuthService({
+    const identitySetup = createIdentitySetup(process.env, () =>
+      createAuthService({
         repository: createPrismaAuthRepository(prisma),
         errorLog,
         rateLimiter: createRateLimiter({
@@ -48,7 +53,16 @@ export function getServices(): Services {
         }),
         allowSignUp: isSignUpAllowed(),
         newId,
-      }),
+      })
+    );
+    if (!identitySetup.ok) {
+      throw new Error(
+        `Identity is not configured correctly: ${identitySetup.errors.join(' ')}`
+      );
+    }
+    globalForServices.services = {
+      identity: identitySetup.value.identity,
+      accounts: identitySetup.value.accounts,
       projects: createProjectService({
         repository: projectRepository,
         storage,

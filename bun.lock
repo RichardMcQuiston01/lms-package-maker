@@ -19,6 +19,7 @@
         "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-identity": "workspace:*",
         "@richardmcquiston01/lms-package-maker-model": "workspace:*",
         "@richardmcquiston01/storage-adapters": "^0.23.0",
         "next": "^15",
@@ -81,6 +82,10 @@
         "@richardmcquiston01/lms-package-maker-model": "workspace:*",
         "fflate": "^0.8.2",
       },
+    },
+    "packages/identity": {
+      "name": "@richardmcquiston01/lms-package-maker-identity",
+      "version": "0.1.0",
     },
     "packages/model": {
       "name": "@richardmcquiston01/lms-package-maker-model",
@@ -209,6 +214,8 @@
     "@richardmcquiston01/lms-package-maker-exporter-scorm12": ["@richardmcquiston01/lms-package-maker-exporter-scorm12@workspace:packages/exporter-scorm12"],
 
     "@richardmcquiston01/lms-package-maker-exporters": ["@richardmcquiston01/lms-package-maker-exporters@workspace:packages/exporters"],
+
+    "@richardmcquiston01/lms-package-maker-identity": ["@richardmcquiston01/lms-package-maker-identity@workspace:packages/identity"],
 
     "@richardmcquiston01/lms-package-maker-model": ["@richardmcquiston01/lms-package-maker-model@workspace:packages/model"],
 

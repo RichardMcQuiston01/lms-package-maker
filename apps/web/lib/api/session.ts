@@ -1,18 +1,34 @@
-import { isSameOriginRequest, readSessionToken } from '../auth/http';
-import type { AuthService } from '../auth/service';
-import type { AuthUser } from '../auth/types';
-import { errorResponse } from './http';
+import {
+  validateIdentity,
+  type Identity,
+  type IdentityProvider,
+  type IdentityResult,
+} from '@richardmcquiston01/lms-package-maker-identity';
+import { isSameOriginRequest } from '../auth/http';
+import { errorResponse, jsonResponse } from './http';
 
 export type RequestUser =
-  | { readonly ok: true; readonly user: AuthUser }
+  | { readonly ok: true; readonly user: Identity }
   | { readonly ok: false; readonly response: Response };
 
+function signedOutResponse(identity: IdentityProvider): Response {
+  return jsonResponse(
+    {
+      error: 'You need to sign in to do this.',
+      details: [],
+      signInUrl: identity.signInUrl,
+    },
+    401
+  );
+}
+
 /**
- * Works out who is calling. Cross-site writes are refused, and a missing or
- * expired session gets a 401 that says how to fix it.
+ * Works out who is calling by asking the identity provider. Cross-site writes
+ * are refused, nobody signed in gets a 401 that says where to sign in, and an
+ * identity the app cannot accept is refused with the reason.
  */
 export async function authenticateRequest(
-  auth: AuthService,
+  identity: IdentityProvider,
   request: Request
 ): Promise<RequestUser> {
   if (!isSameOriginRequest(request)) {
@@ -24,14 +40,44 @@ export async function authenticateRequest(
       ),
     };
   }
-  const user: AuthUser | null = await auth.authenticate(
-    readSessionToken(request.headers.get('cookie'))
-  );
-  if (user === null) {
+  let result: IdentityResult;
+  try {
+    result = await identity.identify({ headers: request.headers });
+  } catch (cause: unknown) {
+    // Providers should not throw, but a host's might; never let that become a 500 page.
+    const reason: string =
+      cause instanceof Error ? cause.message : String(cause);
     return {
       ok: false,
-      response: errorResponse(401, 'You need to sign in to do this.'),
+      response: errorResponse(
+        401,
+        `The '${identity.name}' identity provider failed: ${reason}`
+      ),
     };
   }
-  return { ok: true, user };
+  if (!result.ok) {
+    return {
+      ok: false,
+      response: errorResponse(
+        401,
+        `The '${identity.name}' identity provider could not tell who you are: ${result.errors.join('; ')}`,
+        result.errors
+      ),
+    };
+  }
+  if (result.value === null) {
+    return { ok: false, response: signedOutResponse(identity) };
+  }
+  const checked = validateIdentity(result.value);
+  if (!checked.ok) {
+    return {
+      ok: false,
+      response: errorResponse(
+        401,
+        `The '${identity.name}' identity provider returned an identity the app cannot use: ${checked.errors.join('; ')}`,
+        checked.errors
+      ),
+    };
+  }
+  return { ok: true, user: checked.value };
 }

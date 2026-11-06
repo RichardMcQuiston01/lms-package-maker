@@ -40,6 +40,7 @@ Each package under `packages/` is built to be published on its own (ESM, typed, 
 
 | Package | Purpose |
 | --- | --- |
+| `identity` | The `IdentityProvider` contract, plus `header` and `single-user` providers |
 | `model` | Course Model types and validation |
 | `runtime` | Browser runtime: SCORM 1.2 API or `postMessage` to the host |
 | `player` | Static course player generated from a Course Model |
@@ -93,11 +94,29 @@ Upload PNG, JPEG, GIF, WebP images, MP3, WAV, OGG, M4A audio and MP4, WebM video
 - A file that a page still uses cannot be deleted. Audio and video can only use uploaded files, not outside addresses.
 - Preview plays audio and video but cannot seek, because the preview route does not support range requests yet.
 
-### Accounts
+### Identity
 
-Sign in with an email and password (scrypt-hashed). The first account is created from the sign-up page and takes over any courses made before sign-in existed. After that sign-up is closed unless `ALLOW_SIGN_UP=true`. Every course belongs to one account; other people get "not found". Sessions last 14 days in an HttpOnly, SameSite=Lax cookie, repeated failed sign-ins are rate limited, and state-changing requests from other sites are refused.
+The app asks one question of whatever signs people in: *who is this request from?* The answer comes from an **identity provider**, chosen with `IDENTITY_PROVIDER`:
 
-In production set `AUTH_SECRET` (at least 32 random characters, `openssl rand -base64 48`) and serve the app over HTTPS, so the cookie is marked `Secure`. Rate limiting is per server process. There is no password reset, email verification, sharing or admin screen yet.
+| Provider | Use it when | Settings |
+| --- | --- | --- |
+| `builtin` (default) | You run the app on its own and want simple email and password accounts | `ALLOW_SIGN_UP` |
+| `header` | A login proxy (oauth2-proxy, Authelia, an SSO ingress, ...) in front of the app already authenticates people | `IDENTITY_PROXY_SECRET` (required), `IDENTITY_USER_HEADER`, `IDENTITY_NAME_HEADER`, `IDENTITY_EMAIL_HEADER`, `IDENTITY_SECRET_HEADER`, `IDENTITY_SIGN_IN_URL`, `IDENTITY_SIGN_OUT_URL` |
+| `single-user` | One person runs the app on their own machine (for example a desktop build) | `SINGLE_USER_NAME`; in production also `IDENTITY_SINGLE_USER_ACKNOWLEDGED=true` |
+
+Courses belong to the id the provider returns. The app never looks inside an id, so a host can use whatever it already has; it only checks that the id is 1 to 255 characters without control characters. With any provider other than `builtin`, the app's own sign-in, sign-up and sign-out pages and routes are off (they answer 404).
+
+**`header` mode is only safe when the app can be reached through the proxy alone.** Anyone who can reach the app directly could send the user header themselves, so the proxy must also send the shared secret (`IDENTITY_SECRET_HEADER`, default `x-identity-proxy-secret`); a request without it is treated as signed out. The app refuses to start in `header` mode without a secret.
+
+**Bring your own login.** The contract is the small package [`@richardmcquiston01/lms-package-maker-identity`](packages/identity): implement `IdentityProvider` (`identify({ headers })` returns the person, nobody, or an error) and pass it where the app builds its services (`apps/web/lib/identity/fromEnvironment.ts`). The same package holds the `header` and `single-user` providers.
+
+Account management beyond signing in (password reset, email verification, sharing, an admin screen) is **out of scope on purpose**: use a provider that already does it.
+
+#### Built-in accounts
+
+Sign in with an email and password (scrypt-hashed). The first account is created from the sign-up page and takes over any courses made before sign-in existed. After that sign-up is closed unless `ALLOW_SIGN_UP=true`. Sessions last 14 days in an HttpOnly, SameSite=Lax cookie, repeated failed sign-ins are rate limited (per server process), and state-changing requests from other sites are refused (for every provider).
+
+In production set `AUTH_SECRET` (at least 32 random characters, `openssl rand -base64 48`), which signs the short-lived preview links for every provider, and serve the app over HTTPS so the cookie is marked `Secure`.
 
 Stack: Next.js, Prisma, TailwindCSS. Stored files use [storage-adapters](https://github.com/RichardMcQuiston01/storage-adapters) and errors go through [error-log-adapter](https://github.com/RichardMcQuiston01/error-log-adapter), so both sinks can be swapped without changing application code.
 

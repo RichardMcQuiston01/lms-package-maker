@@ -1,9 +1,10 @@
-import { notFound, redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { CourseEditor } from '../../../components/CourseEditor';
 import { isProjectId } from '../../../lib/api/http';
 import { toMediaJson } from '../../../lib/api/mediaHandlers';
 import { getCurrentUser } from '../../../lib/auth/current';
+import { redirectToSignIn } from '../../../lib/identity/redirect';
 import { getServices } from '../../../lib/services';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,7 @@ export default async function ProjectPage({
   }
   const user = await getCurrentUser();
   if (user === null) {
-    redirect('/sign-in');
+    redirectToSignIn();
   }
   const services = getServices();
   const found = await services.projects.get(id, user.id);

@@ -77,4 +77,33 @@ describe('preview tokens', () => {
       expect(verifyPreviewToken(SECRET, PROJECT, garbage, now).ok).toBe(false);
     }
   });
+
+  test('work for owner ids with dots, slashes, colons and unicode', () => {
+    for (const owner of [
+      'header:ada@example.com',
+      'sso:a/b/c',
+      'x:y:z',
+      'ünï-用户',
+      'a.b.c.d',
+    ]) {
+      const token: string = signPreviewToken(SECRET, PROJECT, owner, now);
+      expect(token.split('.')).toHaveLength(3);
+      expect(token).not.toContain('/');
+      expect(verifyPreviewToken(SECRET, PROJECT, token, now)).toEqual({
+        ok: true,
+        value: { userId: owner },
+      });
+    }
+  });
+
+  test('a token for one owner cannot be turned into another by editing the id part', () => {
+    const token: string = signPreviewToken(SECRET, PROJECT, 'header:ada', now);
+    const parts: string[] = token.split('.');
+    const edited = [
+      parts[0],
+      Buffer.from('header:bob', 'utf8').toString('base64url'),
+      parts[2],
+    ].join('.');
+    expect(verifyPreviewToken(SECRET, PROJECT, edited, now).ok).toBe(false);
+  });
 });
