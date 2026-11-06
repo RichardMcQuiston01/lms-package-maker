@@ -49,13 +49,17 @@ function toRecord(row: ProjectRow): Result<ProjectRecord> {
 }
 
 /** Stores projects in PostgreSQL through Prisma. */
+/** What the repository needs; a transaction client satisfies it too. */
+export type ProjectDatabase = Pick<PrismaClient, 'project' | 'packageExport'>;
+
 export function createPrismaRepository(
-  client: PrismaClient
+  client: ProjectDatabase
 ): ProjectRepository {
   return {
-    async list(): Promise<Result<readonly ProjectSummary[]>> {
+    async list(ownerId: string): Promise<Result<readonly ProjectSummary[]>> {
       try {
         const rows = await client.project.findMany({
+          where: { ownerId },
           select: { id: true, name: true, description: true, updatedAt: true },
           orderBy: { updatedAt: 'desc' },
         });
@@ -67,9 +71,12 @@ export function createPrismaRepository(
         };
       }
     },
-    async get(id: string): Promise<Result<ProjectRecord | null>> {
+    async get(
+      id: string,
+      ownerId: string
+    ): Promise<Result<ProjectRecord | null>> {
       try {
-        const row = await client.project.findUnique({ where: { id } });
+        const row = await client.project.findFirst({ where: { id, ownerId } });
         if (row === null) {
           return { ok: true, value: null };
         }
@@ -83,12 +90,14 @@ export function createPrismaRepository(
     },
     async create(
       id: string,
+      ownerId: string,
       course: CourseModel
     ): Promise<Result<ProjectRecord>> {
       try {
         const row = await client.project.create({
           data: {
             id,
+            ownerId,
             name: course.title,
             description: course.description,
             courseJson: course as unknown as Prisma.InputJsonValue,
@@ -104,11 +113,12 @@ export function createPrismaRepository(
     },
     async update(
       id: string,
+      ownerId: string,
       course: CourseModel
     ): Promise<Result<ProjectRecord | null>> {
       try {
         const result = await client.project.updateMany({
-          where: { id },
+          where: { id, ownerId },
           data: {
             name: course.title,
             description: course.description,
@@ -118,7 +128,7 @@ export function createPrismaRepository(
         if (result.count === 0) {
           return { ok: true, value: null };
         }
-        const row = await client.project.findUnique({ where: { id } });
+        const row = await client.project.findFirst({ where: { id, ownerId } });
         return row === null ? { ok: true, value: null } : toRecord(row);
       } catch (cause: unknown) {
         return {

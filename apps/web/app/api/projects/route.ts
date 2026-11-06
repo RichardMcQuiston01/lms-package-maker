@@ -1,12 +1,13 @@
 import { createProject, listProjects } from '../../../lib/api/handlers';
-import { getProjectService } from '../../../lib/services';
+import { signedIn } from '../../../lib/api/routes';
 
 export const dynamic = 'force-dynamic';
 
-export function GET(): Promise<Response> {
-  return listProjects(getProjectService());
-}
+export const GET = signedIn<unknown>((services, user): Promise<Response> =>
+  listProjects(services.projects, user.id)
+);
 
-export function POST(request: Request): Promise<Response> {
-  return createProject(getProjectService(), request);
-}
+export const POST = signedIn<unknown>(
+  (services, user, request): Promise<Response> =>
+    createProject(services.projects, user.id, request)
+);

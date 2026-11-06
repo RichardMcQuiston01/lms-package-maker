@@ -14,7 +14,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { saveCourseRequest } from '../lib/apiClient';
+import { previewLinkRequest, saveCourseRequest } from '../lib/apiClient';
 import {
   addModule,
   addPage,
@@ -36,6 +36,7 @@ import { PreviewPane } from './PreviewPane';
 interface CourseEditorProps {
   readonly projectId: string;
   readonly initialCourse: CourseModel;
+  readonly initialPreviewUrl: string;
 }
 
 type StatusMessage =
@@ -52,6 +53,7 @@ const EXPORT_BUTTONS: readonly { standard: string; label: string }[] = [
 export function CourseEditor({
   projectId,
   initialCourse,
+  initialPreviewUrl,
 }: CourseEditorProps): ReactNode {
   const [course, setCourse] = useState<CourseModel>(initialCourse);
   const [savedCourse, setSavedCourse] = useState<CourseModel>(initialCourse);
@@ -59,7 +61,7 @@ export function CourseEditor({
     firstPage(initialCourse)?.id ?? null
   );
   const [status, setStatus] = useState<StatusMessage>({ kind: 'idle' });
-  const [previewVersion, setPreviewVersion] = useState<number>(0);
+  const [previewUrl, setPreviewUrl] = useState<string>(initialPreviewUrl);
   const courseRef = useRef<CourseModel>(course);
   courseRef.current = course;
 
@@ -90,7 +92,17 @@ export function CourseEditor({
     if (courseRef.current === sent) {
       setCourse(saved.value);
     }
-    setPreviewVersion((version: number): number => version + 1);
+    // Preview links expire, so ask for a fresh one together with the new version.
+    const link: Result<string> = await previewLinkRequest(projectId);
+    if (link.ok) {
+      setPreviewUrl(link.value);
+    } else {
+      setStatus({
+        kind: 'error',
+        message: `Saved, but ${link.errors.join(' ')}`,
+      });
+      return true;
+    }
     setStatus({ kind: 'saved' });
     return true;
   }, [projectId]);
@@ -260,8 +272,7 @@ export function CourseEditor({
           />
         </main>
         <PreviewPane
-          projectId={projectId}
-          version={previewVersion}
+          previewUrl={previewUrl}
           hasUnsavedChanges={hasUnsavedChanges}
         />
       </div>

@@ -7,7 +7,7 @@ import {
 } from '@richardmcquiston01/error-log-adapter';
 
 export type AppErrorCode =
-  'PROJECT_INVALID' | 'EXPORT_FAILED' | 'STORAGE_FAILED';
+  'PROJECT_INVALID' | 'EXPORT_FAILED' | 'STORAGE_FAILED' | 'AUTH_FAILED';
 
 /**
  * Logs to the console and to a rotating NDJSON file under LMS_DATA_DIR.
