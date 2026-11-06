@@ -7,6 +7,8 @@ import type {
   ErrorLogResult,
 } from '@richardmcquiston01/error-log-adapter';
 import type { AppErrorCode } from './errorLog';
+import { createMemoryMediaRepository } from './media/memoryMediaRepository';
+import { createMediaService, type MediaService } from './media/service';
 import { createMemoryAuthRepository } from './auth/memoryAuthRepository';
 import { createRateLimiter } from './auth/rateLimiter';
 import { createAuthService, type AuthService } from './auth/service';
@@ -32,27 +34,45 @@ export function createRecordingErrorLog(): RecordingErrorLog {
 
 export interface TestServices {
   readonly service: ProjectService;
+  readonly media: MediaService;
   readonly repository: ProjectRepository;
   readonly errorLog: RecordingErrorLog;
 }
 
 /** A project service on in-memory storage, with predictable ids. */
 export function createTestServices(
-  repository: ProjectRepository = createMemoryRepository()
+  repository: ProjectRepository = createMemoryRepository(),
+  options: { maxMediaBytes?: number; maxMediaPerProject?: number } = {}
 ): TestServices {
   const errorLog: RecordingErrorLog = createRecordingErrorLog();
   let counter = 0;
+  const newId = (): string => {
+    counter += 1;
+    return `00000000-0000-4000-8000-${String(counter).padStart(12, '0')}`;
+  };
+  const storage = createMemoryStorage();
+  const media: MediaService = createMediaService({
+    media: createMemoryMediaRepository(),
+    projects: repository,
+    storage,
+    errorLog,
+    newId,
+    ...(options.maxMediaBytes === undefined
+      ? {}
+      : { maxBytes: options.maxMediaBytes }),
+    ...(options.maxMediaPerProject === undefined
+      ? {}
+      : { maxPerProject: options.maxMediaPerProject }),
+  });
   const service: ProjectService = createProjectService({
     repository,
-    storage: createMemoryStorage(),
+    storage,
     errorLog,
     exporters: { html5: html5Exporter, scorm12: scorm12Exporter },
-    newId: (): string => {
-      counter += 1;
-      return `00000000-0000-4000-8000-${String(counter).padStart(12, '0')}`;
-    },
+    media,
+    newId,
   });
-  return { service, repository, errorLog };
+  return { service, media, repository, errorLog };
 }
 
 /** `test` when the condition holds, otherwise `test.skip`. */

@@ -7,6 +7,8 @@ import { createPrismaAuthRepository } from './auth/prismaAuthRepository';
 import { createRateLimiter } from './auth/rateLimiter';
 import { createAuthService, type AuthService } from './auth/service';
 import { createPreviewAccess, type PreviewAccess } from './auth/tokens';
+import { createMediaService, type MediaService } from './media/service';
+import { createPrismaMediaRepository } from './media/prismaMediaRepository';
 import { createPrismaRepository } from './projects/prismaRepository';
 import { createProjectService, type ProjectService } from './projects/service';
 import { createFileStorage } from './storage';
@@ -14,6 +16,7 @@ import { createFileStorage } from './storage';
 export interface Services {
   readonly auth: AuthService;
   readonly projects: ProjectService;
+  readonly media: MediaService;
   readonly previewAccess: PreviewAccess;
 }
 
@@ -26,6 +29,15 @@ export function getServices(): Services {
     const errorLog = createErrorLog(dataDirectory);
     const newId = (): string => crypto.randomUUID();
     const prisma = getPrismaClient();
+    const projectRepository = createPrismaRepository(prisma);
+    const storage = createFileStorage(dataDirectory);
+    const media: MediaService = createMediaService({
+      media: createPrismaMediaRepository(prisma),
+      projects: projectRepository,
+      storage,
+      errorLog,
+      newId,
+    });
     globalForServices.services = {
       auth: createAuthService({
         repository: createPrismaAuthRepository(prisma),
@@ -38,12 +50,14 @@ export function getServices(): Services {
         newId,
       }),
       projects: createProjectService({
-        repository: createPrismaRepository(prisma),
-        storage: createFileStorage(dataDirectory),
+        repository: projectRepository,
+        storage,
         errorLog,
         exporters: { html5: html5Exporter, scorm12: scorm12Exporter },
+        media,
         newId,
       }),
+      media,
       previewAccess: createPreviewAccess(getAuthSecret()),
     };
   }

@@ -3,6 +3,7 @@ import sanitizeHtml from 'sanitize-html';
 const ALLOWED_TAGS: string[] = [
   'a',
   'abbr',
+  'audio',
   'b',
   'blockquote',
   'br',
@@ -29,6 +30,7 @@ const ALLOWED_TAGS: string[] = [
   'p',
   'pre',
   'small',
+  'source',
   'span',
   'strong',
   'sub',
@@ -42,6 +44,7 @@ const ALLOWED_TAGS: string[] = [
   'tr',
   'u',
   'ul',
+  'video',
 ];
 
 /**
@@ -50,6 +53,9 @@ const ALLOWED_TAGS: string[] = [
  * before it is stored.
  *
  * Page titles are rendered as `<h2>`, so headings start at `<h3>`.
+ *
+ * Uploaded media is referenced as `src="media:<id>"`; export swaps the
+ * reference for the file's path inside the package.
  */
 export function sanitizePageHtml(html: string): string {
   return sanitizeHtml(html, {
@@ -57,14 +63,32 @@ export function sanitizePageHtml(html: string): string {
     allowedAttributes: {
       a: ['href', 'title', 'rel', 'target'],
       img: ['src', 'alt', 'title', 'width', 'height'],
+      audio: ['src', 'controls', 'preload', 'title'],
+      video: ['src', 'controls', 'preload', 'title', 'width', 'height'],
+      source: ['src', 'type'],
       td: ['colspan', 'rowspan'],
       th: ['colspan', 'rowspan', 'scope'],
       '*': ['lang'],
     },
     allowedSchemes: ['http', 'https', 'mailto'],
-    allowedSchemesByTag: { img: ['http', 'https', 'data'] },
+    // Audio and video may only use files uploaded to the course (`media:<id>`),
+    // so a package never depends on a server that might disappear.
+    allowedSchemesByTag: {
+      img: ['http', 'https', 'data', 'media'],
+      audio: ['media'],
+      video: ['media'],
+      source: ['media'],
+    },
     allowProtocolRelative: false,
     transformTags: {
+      audio: sanitizeHtml.simpleTransform('audio', {
+        controls: 'controls',
+        preload: 'metadata',
+      }),
+      video: sanitizeHtml.simpleTransform('video', {
+        controls: 'controls',
+        preload: 'metadata',
+      }),
       a: sanitizeHtml.simpleTransform('a', {
         rel: 'noopener noreferrer',
         target: '_blank',

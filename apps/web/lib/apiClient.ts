@@ -3,6 +3,7 @@ import type {
   Result,
 } from '@richardmcquiston01/lms-package-maker-model';
 import type { ApiError } from './api/http';
+import type { MediaJson } from './api/mediaHandlers';
 
 /** Browser-side calls to the JSON API. Failures say what went wrong and where. */
 
@@ -160,6 +161,50 @@ export async function previewLinkRequest(
     }
     const body = (await response.json()) as { url: string };
     return { ok: true, value: body.url };
+  } catch (cause: unknown) {
+    return { ok: false, errors: [describeNetworkFailure(action, cause)] };
+  }
+}
+
+export async function uploadMediaRequest(
+  projectId: string,
+  file: File
+): Promise<Result<MediaJson>> {
+  const action = `Uploading '${file.name}'`;
+  try {
+    const body = new FormData();
+    body.append('file', file, file.name);
+    const response: Response = await fetch(`/api/projects/${projectId}/media`, {
+      method: 'POST',
+      body,
+    });
+    if (!response.ok) {
+      return { ok: false, errors: [await describeFailure(response, action)] };
+    }
+    return {
+      ok: true,
+      value: ((await response.json()) as { media: MediaJson }).media,
+    };
+  } catch (cause: unknown) {
+    return { ok: false, errors: [describeNetworkFailure(action, cause)] };
+  }
+}
+
+export async function deleteMediaRequest(
+  projectId: string,
+  mediaId: string
+): Promise<Result<null>> {
+  const action = 'Deleting the file';
+  try {
+    const response: Response = await fetch(
+      `/api/projects/${projectId}/media/${mediaId}`,
+      {
+        method: 'DELETE',
+      }
+    );
+    return response.ok
+      ? { ok: true, value: null }
+      : { ok: false, errors: [await describeFailure(response, action)] };
   } catch (cause: unknown) {
     return { ok: false, errors: [describeNetworkFailure(action, cause)] };
   }

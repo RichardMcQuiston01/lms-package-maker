@@ -1,8 +1,10 @@
 import type { ErrorLogAdapter } from '@richardmcquiston01/error-log-adapter';
 import type { StorageAdapter } from '@richardmcquiston01/storage-adapters';
 import {
+  collectCourseMediaUses,
   validateCourseModel,
   type CourseModel,
+  type MediaUse,
   type Module,
   type Page,
   type Result,
@@ -14,8 +16,12 @@ import {
   type PackageFiles,
 } from '@richardmcquiston01/lms-package-maker-exporters';
 import type { AppErrorCode } from '../errorLog';
+import type { MediaResolver } from '../media/types';
+import type { ServiceResult } from '../serviceResult';
 import { sanitizePageHtml } from '../sanitize';
 import type { ProjectRecord, ProjectRepository, ProjectSummary } from './types';
+
+export type { ServiceResult } from '../serviceResult';
 
 /** Standards the app can export today. */
 export type SupportedStandard = Extract<ExportStandard, 'html5' | 'scorm12'>;
@@ -28,15 +34,6 @@ export const SUPPORTED_STANDARDS: readonly SupportedStandard[] = [
 export function isSupportedStandard(value: string): value is SupportedStandard {
   return (SUPPORTED_STANDARDS as readonly string[]).includes(value);
 }
-
-/** Why a service call failed, so callers can pick an HTTP status or a message. */
-export type ServiceResult<TValue> =
-  | { readonly ok: true; readonly value: TValue }
-  | {
-      readonly ok: false;
-      readonly kind: 'invalid' | 'notFound' | 'failed';
-      readonly errors: readonly string[];
-    };
 
 export interface ExportedPackage {
   readonly fileName: string;
@@ -83,6 +80,8 @@ export interface ProjectServiceDependencies {
   readonly storage: StorageAdapter;
   readonly errorLog: ErrorLogAdapter<AppErrorCode>;
   readonly exporters: Readonly<Record<SupportedStandard, Exporter>>;
+  /** Looks up and loads the media that pages refer to. */
+  readonly media: MediaResolver;
   readonly newId: () => string;
 }
 
@@ -90,6 +89,16 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
 };
 
 const MAX_TITLE_LENGTH = 200;
@@ -160,7 +169,8 @@ function encodeBase64(bytes: Uint8Array): string {
 export function createProjectService(
   dependencies: ProjectServiceDependencies
 ): ProjectService {
-  const { repository, storage, errorLog, exporters, newId } = dependencies;
+  const { repository, storage, errorLog, exporters, media, newId } =
+    dependencies;
 
   async function logProblem(
     code: AppErrorCode,
@@ -263,6 +273,27 @@ export function createProjectService(
       }
       // The project id is the course id; never trust the client's copy.
       const course: CourseModel = sanitizeCourse({ ...validated.value, id });
+      const uses: MediaUse[] = collectCourseMediaUses(course);
+      const missing = await media.findMissing(id, [
+        ...new Set(uses.map((use: MediaUse): string => use.mediaId)),
+      ]);
+      if (!missing.ok) {
+        return missing;
+      }
+      if (missing.value.length > 0) {
+        return {
+          ok: false,
+          kind: 'invalid',
+          errors: uses
+            .filter((use: MediaUse): boolean =>
+              missing.value.includes(use.mediaId)
+            )
+            .map(
+              (use: MediaUse): string =>
+                `page '${use.pageTitle}' uses media ${use.mediaId} that is not in this course; upload it first`
+            ),
+        };
+      }
       const updated = await repository.update(id, ownerId, course);
       if (!updated.ok) {
         await logProblem(
@@ -291,8 +322,13 @@ export function createProjectService(
       if (!project.ok) {
         return project;
       }
+      const resolved = await media.resolve(id, project.value.course);
+      if (!resolved.ok) {
+        return resolved;
+      }
       const exported: Result<PackageFiles> = exporters[standard].export(
-        project.value.course
+        resolved.value.course,
+        { assets: resolved.value.assets }
       );
       if (!exported.ok) {
         await logProblem(
@@ -331,8 +367,13 @@ export function createProjectService(
       if (!project.ok) {
         return project;
       }
+      const resolved = await media.resolve(id, project.value.course);
+      if (!resolved.ok) {
+        return resolved;
+      }
       const built: Result<PackageFiles> = exporters.html5.export(
-        project.value.course
+        resolved.value.course,
+        { assets: resolved.value.assets }
       );
       if (!built.ok) {
         return { ok: false, kind: 'invalid', errors: built.errors };

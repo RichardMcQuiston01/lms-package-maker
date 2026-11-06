@@ -73,6 +73,15 @@ Open http://localhost:3000, create a course, edit its pages, watch the preview, 
 
 The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one.
 
+### Media
+
+Upload PNG, JPEG, GIF, WebP images, MP3, WAV, OGG, M4A audio and MP4, WebM video from the editor's Media panel, then press Insert to put the file into the open page. Files are kept through [storage-adapters](https://github.com/RichardMcQuiston01/storage-adapters) under `LMS_DATA_DIR`. Pages refer to a file as `src="media:<id>"`; exports copy the files into the package under `media/`, rewrite the links to those paths and list the files in the SCORM manifest.
+
+- The type comes from the file's first bytes, not its name. SVG is refused because it can carry script.
+- The limit is 25 MB per file and 100 files per course. The storage adapters hold text values, so bytes are stored as base64 (about a third larger) and read whole into memory; larger video needs a binary-capable store.
+- A file that a page still uses cannot be deleted. Audio and video can only use uploaded files, not outside addresses.
+- Preview plays audio and video but cannot seek, because the preview route does not support range requests yet.
+
 ### Accounts
 
 Sign in with an email and password (scrypt-hashed). The first account is created from the sign-up page and takes over any courses made before sign-in existed. After that sign-up is closed unless `ALLOW_SIGN_UP=true`. Every course belongs to one account; other people get "not found". Sessions last 14 days in an HttpOnly, SameSite=Lax cookie, repeated failed sign-ins are rate limited, and state-changing requests from other sites are refused.
