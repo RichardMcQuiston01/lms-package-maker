@@ -71,7 +71,13 @@ cd apps/web && bunx prisma migrate dev && bun run dev
 
 Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2 or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
 
-The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one. The app has no sign-in yet, so run it on a trusted network only.
+The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one.
+
+### Accounts
+
+Sign in with an email and password (scrypt-hashed). The first account is created from the sign-up page and takes over any courses made before sign-in existed. After that sign-up is closed unless `ALLOW_SIGN_UP=true`. Every course belongs to one account; other people get "not found". Sessions last 14 days in an HttpOnly, SameSite=Lax cookie, repeated failed sign-ins are rate limited, and state-changing requests from other sites are refused.
+
+In production set `AUTH_SECRET` (at least 32 random characters, `openssl rand -base64 48`) and serve the app over HTTPS, so the cookie is marked `Secure`. Rate limiting is per server process. There is no password reset, email verification, sharing or admin screen yet.
 
 Stack: Next.js, Prisma, TailwindCSS. Stored files use [storage-adapters](https://github.com/RichardMcQuiston01/storage-adapters) and errors go through [error-log-adapter](https://github.com/RichardMcQuiston01/error-log-adapter), so both sinks can be swapped without changing application code.
 

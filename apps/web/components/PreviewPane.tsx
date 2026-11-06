@@ -3,9 +3,8 @@
 import type { ReactNode } from 'react';
 
 interface PreviewPaneProps {
-  readonly projectId: string;
-  /** Changes whenever a new saved version should be loaded. */
-  readonly version: number;
+  /** Signed link to the preview; a new link loads the newest saved version. */
+  readonly previewUrl: string;
   readonly hasUnsavedChanges: boolean;
 }
 
@@ -15,8 +14,7 @@ interface PreviewPaneProps {
  * or storage even if it were hostile.
  */
 export function PreviewPane({
-  projectId,
-  version,
+  previewUrl,
   hasUnsavedChanges,
 }: PreviewPaneProps): ReactNode {
   return (
@@ -30,9 +28,9 @@ export function PreviewPane({
         </span>
       </div>
       <iframe
-        key={version}
+        key={previewUrl}
         title="Course preview"
-        src={`/api/projects/${projectId}/preview/index.html`}
+        src={previewUrl}
         sandbox="allow-scripts"
         className="min-h-96 w-full flex-1 rounded-md border border-slate-300 bg-white"
       />

@@ -1,3 +1,4 @@
+import type { PreviewAccess } from '../auth/tokens';
 import {
   isSupportedStandard,
   SUPPORTED_STANDARDS,
@@ -12,8 +13,9 @@ import {
 } from './http';
 
 /**
- * The HTTP layer, written as plain functions of (service, request) so it can
- * be tested without running Next.js. The route files only wire these up.
+ * The project HTTP layer, written as plain functions so it can be tested
+ * without running Next.js. Every function takes the signed-in owner's id;
+ * the route files get it from the session cookie before calling these.
  */
 
 const PREVIEW_CONTENT_SECURITY_POLICY = [
@@ -31,8 +33,11 @@ function badId(id: string): Response {
   );
 }
 
-export async function listProjects(service: ProjectService): Promise<Response> {
-  const listed = await service.list();
+export async function listProjects(
+  service: ProjectService,
+  ownerId: string
+): Promise<Response> {
+  const listed = await service.list(ownerId);
   return listed.ok
     ? jsonResponse({ projects: listed.value })
     : failureResponse(listed);
@@ -40,6 +45,7 @@ export async function listProjects(service: ProjectService): Promise<Response> {
 
 export async function createProject(
   service: ProjectService,
+  ownerId: string,
   request: Request
 ): Promise<Response> {
   const body = await readJsonBody(request);
@@ -57,7 +63,7 @@ export async function createProject(
   if (typeof record['title'] !== 'string') {
     return errorResponse(400, "The request body needs a string 'title'");
   }
-  const created = await service.create({
+  const created = await service.create(ownerId, {
     title: record['title'],
     ...(typeof record['description'] === 'string'
       ? { description: record['description'] }
@@ -73,12 +79,13 @@ export async function createProject(
 
 export async function getProject(
   service: ProjectService,
+  ownerId: string,
   id: string
 ): Promise<Response> {
   if (!isProjectId(id)) {
     return badId(id);
   }
-  const found = await service.get(id);
+  const found = await service.get(id, ownerId);
   return found.ok
     ? jsonResponse({ project: found.value })
     : failureResponse(found);
@@ -86,6 +93,7 @@ export async function getProject(
 
 export async function saveProject(
   service: ProjectService,
+  ownerId: string,
   id: string,
   request: Request
 ): Promise<Response> {
@@ -96,7 +104,7 @@ export async function saveProject(
   if (!body.ok) {
     return body.response;
   }
-  const saved = await service.saveCourse(id, body.value);
+  const saved = await service.saveCourse(id, ownerId, body.value);
   return saved.ok
     ? jsonResponse({ project: saved.value })
     : failureResponse(saved);
@@ -104,6 +112,7 @@ export async function saveProject(
 
 export async function exportProject(
   service: ProjectService,
+  ownerId: string,
   id: string,
   standard: string | null
 ): Promise<Response> {
@@ -116,7 +125,7 @@ export async function exportProject(
       `The 'standard' query parameter must be one of ${SUPPORTED_STANDARDS.join(', ')}; got '${standard ?? ''}'`
     );
   }
-  const exported = await service.exportProject(id, standard);
+  const exported = await service.exportProject(id, ownerId, standard);
   if (!exported.ok) {
     return failureResponse(exported);
   }
@@ -130,16 +139,49 @@ export async function exportProject(
   });
 }
 
+/** Gives the editor a fresh signed link to the preview of a project it owns. */
+export async function previewLink(
+  service: ProjectService,
+  access: PreviewAccess,
+  ownerId: string,
+  id: string
+): Promise<Response> {
+  if (!isProjectId(id)) {
+    return badId(id);
+  }
+  const found = await service.get(id, ownerId);
+  if (!found.ok) {
+    return failureResponse(found);
+  }
+  return jsonResponse({ url: access.urlFor(id, ownerId) });
+}
+
+/**
+ * Serves a preview file. The sandboxed preview frame cannot send the session
+ * cookie, so this route is opened with the signed token from `previewLink`.
+ */
 export async function previewProject(
   service: ProjectService,
+  access: PreviewAccess,
   id: string,
+  token: string,
   pathSegments: readonly string[]
 ): Promise<Response> {
   if (!isProjectId(id)) {
     return badId(id);
   }
-  const filePath: string = pathSegments.join('/');
-  const file = await service.preview(id, filePath);
+  const verified = access.verify(id, token);
+  if (!verified.ok) {
+    return errorResponse(
+      403,
+      `The preview link was refused: ${verified.errors[0] ?? 'invalid'}`
+    );
+  }
+  const file = await service.preview(
+    id,
+    verified.value.userId,
+    pathSegments.join('/')
+  );
   if (!file.ok) {
     return failureResponse(file);
   }

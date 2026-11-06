@@ -50,22 +50,32 @@ export interface PreviewFile {
 }
 
 export interface ProjectService {
-  list(): Promise<ServiceResult<readonly ProjectSummary[]>>;
-  get(id: string): Promise<ServiceResult<ProjectRecord>>;
-  create(input: {
-    title: string;
-    description?: string;
-    language?: string;
-  }): Promise<ServiceResult<ProjectRecord>>;
+  /** Every call is for one signed-in owner; other people's projects look missing. */
+  list(ownerId: string): Promise<ServiceResult<readonly ProjectSummary[]>>;
+  get(id: string, ownerId: string): Promise<ServiceResult<ProjectRecord>>;
+  create(
+    ownerId: string,
+    input: {
+      title: string;
+      description?: string;
+      language?: string;
+    }
+  ): Promise<ServiceResult<ProjectRecord>>;
   saveCourse(
     id: string,
+    ownerId: string,
     course: unknown
   ): Promise<ServiceResult<ProjectRecord>>;
   exportProject(
     id: string,
+    ownerId: string,
     standard: SupportedStandard
   ): Promise<ServiceResult<ExportedPackage>>;
-  preview(id: string, filePath: string): Promise<ServiceResult<PreviewFile>>;
+  preview(
+    id: string,
+    ownerId: string,
+    filePath: string
+  ): Promise<ServiceResult<PreviewFile>>;
 }
 
 export interface ProjectServiceDependencies {
@@ -161,8 +171,11 @@ export function createProjectService(
     await errorLog.log({ code, message, source });
   }
 
-  async function load(id: string): Promise<ServiceResult<ProjectRecord>> {
-    const found = await repository.get(id);
+  async function load(
+    id: string,
+    ownerId: string
+  ): Promise<ServiceResult<ProjectRecord>> {
+    const found = await repository.get(id, ownerId);
     if (!found.ok) {
       await logProblem(
         'STORAGE_FAILED',
@@ -182,8 +195,10 @@ export function createProjectService(
   }
 
   return {
-    async list(): Promise<ServiceResult<readonly ProjectSummary[]>> {
-      const listed = await repository.list();
+    async list(
+      ownerId: string
+    ): Promise<ServiceResult<readonly ProjectSummary[]>> {
+      const listed = await repository.list(ownerId);
       if (!listed.ok) {
         await logProblem(
           'STORAGE_FAILED',
@@ -197,7 +212,7 @@ export function createProjectService(
 
     get: load,
 
-    async create(input): Promise<ServiceResult<ProjectRecord>> {
+    async create(ownerId, input): Promise<ServiceResult<ProjectRecord>> {
       const title: string = (input.title ?? '').trim();
       if (title === '' || title.length > MAX_TITLE_LENGTH) {
         return {
@@ -216,7 +231,7 @@ export function createProjectService(
         (input.language ?? 'en').trim() || 'en',
         newId
       );
-      const created = await repository.create(id, course);
+      const created = await repository.create(id, ownerId, course);
       if (!created.ok) {
         await logProblem(
           'STORAGE_FAILED',
@@ -230,6 +245,7 @@ export function createProjectService(
 
     async saveCourse(
       id: string,
+      ownerId: string,
       input: unknown
     ): Promise<ServiceResult<ProjectRecord>> {
       const validated: Result<CourseModel> = validateCourseModel(input);
@@ -247,7 +263,7 @@ export function createProjectService(
       }
       // The project id is the course id; never trust the client's copy.
       const course: CourseModel = sanitizeCourse({ ...validated.value, id });
-      const updated = await repository.update(id, course);
+      const updated = await repository.update(id, ownerId, course);
       if (!updated.ok) {
         await logProblem(
           'STORAGE_FAILED',
@@ -268,9 +284,10 @@ export function createProjectService(
 
     async exportProject(
       id: string,
+      ownerId: string,
       standard: SupportedStandard
     ): Promise<ServiceResult<ExportedPackage>> {
-      const project = await load(id);
+      const project = await load(id, ownerId);
       if (!project.ok) {
         return project;
       }
@@ -307,9 +324,10 @@ export function createProjectService(
 
     async preview(
       id: string,
+      ownerId: string,
       filePath: string
     ): Promise<ServiceResult<PreviewFile>> {
-      const project = await load(id);
+      const project = await load(id, ownerId);
       if (!project.ok) {
         return project;
       }

@@ -7,6 +7,9 @@ import type {
   ErrorLogResult,
 } from '@richardmcquiston01/error-log-adapter';
 import type { AppErrorCode } from './errorLog';
+import { createMemoryAuthRepository } from './auth/memoryAuthRepository';
+import { createRateLimiter } from './auth/rateLimiter';
+import { createAuthService, type AuthService } from './auth/service';
 import { createMemoryRepository } from './projects/memoryRepository';
 import { createProjectService, type ProjectService } from './projects/service';
 import type { ProjectRepository } from './projects/types';
@@ -55,4 +58,46 @@ export function createTestServices(
 /** `test` when the condition holds, otherwise `test.skip`. */
 export function testIf(condition: boolean): typeof test {
   return condition ? test : test.skip;
+}
+
+export interface TestAuth {
+  readonly service: AuthService;
+  readonly repository: ReturnType<typeof createMemoryAuthRepository>;
+  readonly errorLog: RecordingErrorLog;
+  /** Moves the service's clock forward. */
+  advanceMinutes(minutes: number): void;
+}
+
+/** An auth service on in-memory storage, with a clock the test controls. */
+export function createTestAuth(
+  options: { allowSignUp?: boolean } = {}
+): TestAuth {
+  let nowMs = Date.parse('2030-01-01T00:00:00Z');
+  const now = (): Date => new Date(nowMs);
+  const repository = createMemoryAuthRepository(now);
+  const errorLog: RecordingErrorLog = createRecordingErrorLog();
+  let counter = 0;
+  const service: AuthService = createAuthService({
+    repository,
+    errorLog,
+    rateLimiter: createRateLimiter({
+      maxFailures: 3,
+      windowMs: 15 * 60 * 1000,
+      now: (): number => nowMs,
+    }),
+    allowSignUp: options.allowSignUp ?? false,
+    newId: (): string => {
+      counter += 1;
+      return `aaaaaaaa-0000-4000-8000-${String(counter).padStart(12, '0')}`;
+    },
+    now,
+  });
+  return {
+    service,
+    repository,
+    errorLog,
+    advanceMinutes(minutes: number): void {
+      nowMs += minutes * 60 * 1000;
+    },
+  };
 }

@@ -1,5 +1,5 @@
 import { exportProject } from '../../../../../lib/api/handlers';
-import { getProjectService } from '../../../../../lib/services';
+import { signedIn } from '../../../../../lib/api/routes';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,13 +7,12 @@ interface RouteContext {
   readonly params: Promise<{ id: string }>;
 }
 
-export async function GET(
-  request: Request,
-  context: RouteContext
-): Promise<Response> {
-  const { id } = await context.params;
-  const standard: string | null = new URL(request.url).searchParams.get(
-    'standard'
-  );
-  return exportProject(getProjectService(), id, standard);
-}
+export const GET = signedIn<RouteContext>(
+  async (services, user, request, context): Promise<Response> => {
+    const { id } = await context.params;
+    const standard: string | null = new URL(request.url).searchParams.get(
+      'standard'
+    );
+    return exportProject(services.projects, user.id, id, standard);
+  }
+);

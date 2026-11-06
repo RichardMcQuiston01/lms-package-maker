@@ -34,12 +34,22 @@ export interface NewExport {
 
 /** Where projects live. Every method returns a Result the caller must check. */
 export interface ProjectRepository {
-  list(): Promise<Result<readonly ProjectSummary[]>>;
-  get(id: string): Promise<Result<ProjectRecord | null>>;
-  create(id: string, course: CourseModel): Promise<Result<ProjectRecord>>;
-  /** Replaces the course. Resolves to null when the project does not exist. */
+  /** Only the owner's projects. */
+  list(ownerId: string): Promise<Result<readonly ProjectSummary[]>>;
+  /** Null when the project does not exist or belongs to someone else. */
+  get(id: string, ownerId: string): Promise<Result<ProjectRecord | null>>;
+  create(
+    id: string,
+    ownerId: string,
+    course: CourseModel
+  ): Promise<Result<ProjectRecord>>;
+  /**
+   * Replaces the course. Resolves to null when the project does not exist or
+   * belongs to someone else.
+   */
   update(
     id: string,
+    ownerId: string,
     course: CourseModel
   ): Promise<Result<ProjectRecord | null>>;
   recordExport(input: NewExport): Promise<Result<ExportRecord>>;

@@ -1,8 +1,9 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { CourseEditor } from '../../../components/CourseEditor';
 import { isProjectId } from '../../../lib/api/http';
-import { getProjectService } from '../../../lib/services';
+import { getCurrentUser } from '../../../lib/auth/current';
+import { getServices } from '../../../lib/services';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,7 +18,12 @@ export default async function ProjectPage({
   if (!isProjectId(id)) {
     notFound();
   }
-  const found = await getProjectService().get(id);
+  const user = await getCurrentUser();
+  if (user === null) {
+    redirect('/sign-in');
+  }
+  const services = getServices();
+  const found = await services.projects.get(id, user.id);
   if (!found.ok && found.kind === 'notFound') {
     notFound();
   }
@@ -34,6 +40,7 @@ export default async function ProjectPage({
     <CourseEditor
       projectId={found.value.id}
       initialCourse={found.value.course}
+      initialPreviewUrl={services.previewAccess.urlFor(found.value.id, user.id)}
     />
   );
 }

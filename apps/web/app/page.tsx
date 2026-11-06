@@ -1,15 +1,28 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { NewProjectForm } from '../components/NewProjectForm';
-import { getProjectService } from '../lib/services';
+import { SignOutButton } from '../components/SignOutButton';
+import { getCurrentUser } from '../lib/auth/current';
+import { getServices } from '../lib/services';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage(): Promise<ReactNode> {
-  const listed = await getProjectService().list();
+  const user = await getCurrentUser();
+  if (user === null) {
+    redirect('/sign-in');
+  }
+  const listed = await getServices().projects.list(user.id);
   return (
     <main className="mx-auto max-w-3xl p-8">
-      <h1 className="text-3xl font-semibold">LMS Package Maker</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-3xl font-semibold">LMS Package Maker</h1>
+        <span className="flex items-center gap-3 text-sm text-slate-600">
+          {user.displayName}
+          <SignOutButton />
+        </span>
+      </div>
       <p className="mt-2 text-slate-600">
         Author once, export to SCORM 1.2 or HTML5.
       </p>
