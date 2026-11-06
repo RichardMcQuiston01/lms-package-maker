@@ -45,7 +45,7 @@ Each package under `packages/` is built to be published on its own (ESM, typed, 
 | `player` | Static course player generated from a Course Model |
 | `exporters` | `Exporter` interface and deterministic zip |
 | `exporter-html5` | Plain HTML5 package |
-| `exporter-scorm12` | SCORM 1.2 package |
+| `exporter-scorm12` | SCORM 1.2 package, with the SCORM 1.2 schema files (see `schemas/NOTICE.md` for origin and license) |
 
 The browser scripts are bundled from source into `*.generated.ts` files (`bun run build:bundles`); a test fails if they are stale.
 
