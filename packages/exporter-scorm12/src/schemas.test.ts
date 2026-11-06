@@ -72,6 +72,23 @@ describe('SCORM 1.2 manifest schema validation', () => {
   });
 });
 
+describe('manifest with a pass mark', () => {
+  const quizCourse: CourseModel = {
+    ...course,
+    completion: { kind: 'passQuiz', minScorePercent: 75 },
+  };
+
+  test('declares the mastery score and still validates against the schemas', async () => {
+    const manifest: string = buildScorm12Manifest(quizCourse);
+    expect(manifest).toContain('<adlcp:masteryscore>75</adlcp:masteryscore>');
+    expect(await validate(manifest)).toEqual([]);
+  });
+
+  test('has no mastery score for a view-all course', () => {
+    expect(buildScorm12Manifest(course)).not.toContain('masteryscore');
+  });
+});
+
 describe('manifest with media', () => {
   test('lists the media files and still validates against the schemas', async () => {
     const manifest: string = buildScorm12Manifest(course, [

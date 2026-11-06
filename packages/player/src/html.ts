@@ -4,9 +4,10 @@ import {
   type Result,
 } from '@richardmcquiston01/lms-package-maker-model';
 import { runtimeSource } from '@richardmcquiston01/lms-package-maker-runtime';
-import type { PlayerConfig } from './config.js';
+import type { PlayerConfig, QuizConfig, QuizQuestionConfig } from './config.js';
 import { escapeHtml, jsonForScript } from './escape.js';
 import { playerClientSource } from './playerClientSource.generated.js';
+import { renderPageQuestions } from './questionsHtml.js';
 import { playerCss } from './styles.js';
 
 export interface PlayerOptions {
@@ -49,11 +50,6 @@ function checkCourse(course: CourseModel): readonly string[] {
     return validated.errors;
   }
   const errors: string[] = [];
-  if (course.completion.kind !== 'viewAll') {
-    errors.push(
-      `course.completion.kind '${course.completion.kind}' needs quiz content, which the Course Model does not have yet; use 'viewAll'`
-    );
-  }
   const seen = new Set<string>();
   for (const courseModule of course.modules) {
     for (const page of courseModule.pages) {
@@ -66,6 +62,38 @@ function checkCourse(course: CourseModel): readonly string[] {
     }
   }
   return errors;
+}
+
+/** What the player script needs to mark answers; null when there are no questions. */
+function buildQuizConfig(course: CourseModel): QuizConfig | null {
+  const questions: QuizQuestionConfig[] = [];
+  let pageIndex = 0;
+  for (const courseModule of course.modules) {
+    for (const page of courseModule.pages) {
+      for (const question of page.questions ?? []) {
+        questions.push({
+          pageIndex,
+          kind: question.kind,
+          points: question.points,
+          choiceCount: question.choices.length,
+          correct: question.correctChoiceIds.map((id: string): number =>
+            question.choices.findIndex((choice): boolean => choice.id === id)
+          ),
+        });
+      }
+      pageIndex += 1;
+    }
+  }
+  if (questions.length === 0) {
+    return null;
+  }
+  return {
+    passPercent:
+      course.completion.kind === 'passQuiz'
+        ? course.completion.minScorePercent
+        : null,
+    questions,
+  };
 }
 
 function renderNav(course: CourseModel): string {
@@ -83,13 +111,15 @@ function renderNav(course: CourseModel): string {
 
 function renderPages(course: CourseModel): string {
   let pageIndex = 0;
+  let questionIndex = 0;
   const sections: string[] = [];
   for (const courseModule of course.modules) {
     for (const page of courseModule.pages) {
       // Page HTML is authored content; sanitising it is the editor's job.
       sections.push(
-        `<section class="lpm-page" data-page-index="${pageIndex}" aria-label="${escapeHtml(page.title)}" hidden>\n<h2>${escapeHtml(page.title)}</h2>\n${page.html}\n</section>`
+        `<section class="lpm-page" data-page-index="${pageIndex}" aria-label="${escapeHtml(page.title)}" hidden>\n<h2>${escapeHtml(page.title)}</h2>\n${page.html}\n${renderPageQuestions(page, questionIndex)}\n</section>`
       );
+      questionIndex += page.questions?.length ?? 0;
       pageIndex += 1;
     }
   }
@@ -116,6 +146,8 @@ export function buildPlayerFiles(
     pages: course.modules.flatMap((courseModule) =>
       courseModule.pages.map((page) => ({ id: page.id, title: page.title }))
     ),
+    completion: course.completion.kind,
+    quiz: buildQuizConfig(course),
   };
   const html = `<!doctype html>
 <html lang="${escapeHtml(course.language)}">
@@ -133,6 +165,7 @@ ${renderNav(course)}
 <div class="lpm-main">
 <progress max="1" value="0" aria-label="Course progress"></progress>
 <p id="lpm-status" role="status"></p>
+<p id="lpm-quiz-summary" role="status" hidden></p>
 ${renderPages(course)}
 <div class="lpm-controls">
 <button type="button" data-action="prev">Previous</button>

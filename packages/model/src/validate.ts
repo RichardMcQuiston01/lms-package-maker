@@ -1,3 +1,4 @@
+import { QUESTION_LIMITS, validateQuestions } from './questions.js';
 import {
   COURSE_MODEL_VERSION,
   type CourseModel,
@@ -52,6 +53,8 @@ export function validateCourseModel(input: unknown): Result<CourseModel> {
       `course.completion.kind must be 'viewAll' or 'passQuiz', got ${String(completion['kind'])}`
     );
   }
+  const seenQuestionIds = new Set<string>();
+  let questionCount = 0;
   const modules: unknown = input['modules'];
   if (!Array.isArray(modules) || modules.length === 0) {
     errors.push('course.modules must be a non-empty array');
@@ -80,8 +83,29 @@ export function validateCourseModel(input: unknown): Result<CourseModel> {
         if (typeof pageValue['html'] !== 'string') {
           errors.push(`${pagePath}.html must be a string`);
         }
+        questionCount += validateQuestions(
+          pageValue['questions'],
+          pagePath,
+          seenQuestionIds,
+          errors
+        );
       });
     });
+  }
+  if (questionCount > QUESTION_LIMITS.maxQuestionsPerCourse) {
+    errors.push(
+      `course holds ${questionCount} questions; the most a course can hold is ${QUESTION_LIMITS.maxQuestionsPerCourse}`
+    );
+  }
+  if (
+    isRecord(completion) &&
+    completion['kind'] === 'passQuiz' &&
+    questionCount === 0 &&
+    Array.isArray(modules)
+  ) {
+    errors.push(
+      "course.completion is 'passQuiz' but the course has no questions; add a question or use 'viewAll'"
+    );
   }
   if (errors.length > 0) {
     return { ok: false, errors };

@@ -2,6 +2,12 @@ import { describe, expect, test } from 'bun:test';
 import type { CourseModel } from '@richardmcquiston01/lms-package-maker-model';
 import {
   addModule,
+  addQuestion,
+  countQuestions,
+  moveQuestion,
+  removeQuestion,
+  replaceQuestion,
+  setCompletion,
   addPage,
   findModuleOfPage,
   movePage,
@@ -106,5 +112,72 @@ describe('course edits', () => {
 
   test('update course details', () => {
     expect(updateCourseDetails(course, { title: 'New' }).title).toBe('New');
+  });
+});
+
+describe('question edits on a course', () => {
+  const question = {
+    id: 'q1',
+    kind: 'single' as const,
+    prompt: 'Pick',
+    choices: [
+      { id: 'a', text: 'A' },
+      { id: 'b', text: 'B' },
+    ],
+    correctChoiceIds: ['a'],
+    points: 1,
+  };
+
+  test('add, replace, move and remove questions on a page', () => {
+    let next: CourseModel = unwrap(addQuestion(course, 'p1', question));
+    next = unwrap(addQuestion(next, 'p1', { ...question, id: 'q2' }));
+    expect(
+      next.modules[0]?.pages[0]?.questions?.map((entry) => entry.id)
+    ).toEqual(['q1', 'q2']);
+    expect(countQuestions(next)).toBe(2);
+    next = unwrap(
+      replaceQuestion(next, 'p1', { ...question, id: 'q2', prompt: 'Changed' })
+    );
+    expect(next.modules[0]?.pages[0]?.questions?.[1]?.prompt).toBe('Changed');
+    next = unwrap(moveQuestion(next, 'p1', 'q2', -1));
+    expect(
+      next.modules[0]?.pages[0]?.questions?.map((entry) => entry.id)
+    ).toEqual(['q2', 'q1']);
+    // Moving the first question up changes nothing.
+    expect(unwrap(moveQuestion(next, 'p1', 'q2', -1))).toEqual(next);
+    next = unwrap(removeQuestion(removeQuestionHelper(next), 'p1', 'q1'));
+    expect('questions' in (next.modules[0]?.pages[0] ?? {})).toBe(false);
+  });
+
+  function removeQuestionHelper(value: CourseModel): CourseModel {
+    return unwrap(removeQuestion(value, 'p1', 'q2'));
+  }
+
+  test('never changes the course it is given', () => {
+    const snapshot: string = JSON.stringify(course);
+    addQuestion(course, 'p1', question);
+    expect(JSON.stringify(course)).toBe(snapshot);
+  });
+
+  test('names the missing page, and enforces the limits', () => {
+    const missing = addQuestion(course, 'nope', question);
+    expect(missing.ok).toBe(false);
+    if (!missing.ok) expect(missing.errors[0]).toContain("'nope'");
+    let full: CourseModel = course;
+    for (let index = 0; index < 50; index += 1) {
+      full = unwrap(addQuestion(full, 'p1', { ...question, id: `q${index}` }));
+    }
+    const over = addQuestion(full, 'p1', { ...question, id: 'extra' });
+    expect(over.ok).toBe(false);
+    if (!over.ok) expect(over.errors[0]).toContain('at most 50 questions');
+  });
+
+  test('sets the completion rule', () => {
+    const next = setCompletion(course, {
+      kind: 'passQuiz',
+      minScorePercent: 80,
+    });
+    expect(next.completion).toEqual({ kind: 'passQuiz', minScorePercent: 80 });
+    expect(course.completion).toEqual({ kind: 'viewAll' });
   });
 });

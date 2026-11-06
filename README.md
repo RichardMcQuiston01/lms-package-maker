@@ -73,6 +73,17 @@ Open http://localhost:3000, create a course, edit its pages, watch the preview, 
 
 The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one.
 
+### Quizzes
+
+Add questions to any page in the editor (a page with questions becomes a quiz page). A question has one right answer or several, is worth 1 to 100 points, and can show an explanation after the learner answers. Pick how the course finishes under Completion:
+
+- **Every page viewed** (default): questions are practice. The score is still reported.
+- **Quiz passed**: set a pass mark in percent. When every question has been answered the course is *passed* or *failed* by the best score of all attempts; learners can press Try again, and a later pass upgrades a failed result. The score goes to the LMS as 0 to 100 (`cmi.core.score.*`), and the SCORM manifest declares the pass mark (`adlcp:masteryscore`).
+
+Scoring is exact: a pick-several question is right only when the learner picks exactly the right set, with no partial credit. Answers, the best score and visited pages are saved in the LMS's suspend data, so learners resume where they left off.
+
+The right answers travel inside the package so it can mark answers without a server, which is how SCORM 1.2 content works. A determined learner can read them in the page source; use an LMS-side assessment if that matters.
+
 ### Media
 
 Upload PNG, JPEG, GIF, WebP images, MP3, WAV, OGG, M4A audio and MP4, WebM video from the editor's Media panel, then press Insert to put the file into the open page. Files are kept through [storage-adapters](https://github.com/RichardMcQuiston01/storage-adapters) under `LMS_DATA_DIR`. Pages refer to a file as `src="media:<id>"`; exports copy the files into the package under `media/`, rewrite the links to those paths and list the files in the SCORM manifest.

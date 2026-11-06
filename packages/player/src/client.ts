@@ -1,4 +1,12 @@
-import type { PlayerConfig } from './config.js';
+import type { PlayerConfig, QuizConfig } from './config.js';
+import {
+  hasPassed,
+  isCorrect,
+  reportableScore,
+  scoreQuiz,
+  type Answers,
+} from './quiz.js';
+import { decodeProgress, encodeProgress } from './suspend.js';
 import type {
   ContentRuntime,
   InitialState,
@@ -6,9 +14,12 @@ import type {
 } from '@richardmcquiston01/lms-package-maker-runtime';
 
 /**
- * Browser script of the generated player. It shows one page at a time, tracks
- * which pages were visited, and reports progress through `LmsPackageRuntime`.
- * The course is complete once every page has been visited.
+ * Browser script of the generated player. It shows one page at a time, marks
+ * quiz answers, and reports progress through `LmsPackageRuntime`.
+ *
+ * Completion: with the `viewAll` rule the course is complete once every page
+ * was visited. With `passQuiz` it is passed or failed once every question has
+ * been answered, using the best score of all attempts.
  */
 
 declare global {
@@ -17,8 +28,11 @@ declare global {
   }
 }
 
-function queryAll<T extends Element>(selector: string): T[] {
-  return Array.from(document.querySelectorAll<T>(selector));
+function queryAll<T extends Element>(
+  selector: string,
+  root: ParentNode = document
+): T[] {
+  return Array.from(root.querySelectorAll<T>(selector));
 }
 
 function showStatus(message: string): void {
@@ -42,25 +56,6 @@ function readConfig(): PlayerConfig | null {
   }
 }
 
-/** Visited pages as a string of 0 and 1, one character per page. */
-function encodeVisited(visited: readonly boolean[]): string {
-  return visited.map((seen: boolean): string => (seen ? '1' : '0')).join('');
-}
-
-function decodeVisited(encoded: string | null, pageCount: number): boolean[] {
-  const visited: boolean[] = new Array<boolean>(pageCount).fill(false);
-  if (encoded !== null && /^[01]*$/.test(encoded)) {
-    for (
-      let index = 0;
-      index < Math.min(pageCount, encoded.length);
-      index += 1
-    ) {
-      visited[index] = encoded.charAt(index) === '1';
-    }
-  }
-  return visited;
-}
-
 function report(label: string, result: Result<unknown>): void {
   if (!result.ok) {
     console.error(`[lms-package] ${label}: ${result.error}`);
@@ -79,11 +74,16 @@ function start(): void {
     );
     return;
   }
+  // A constant keeps the narrowing inside the helper functions below.
+  const activeRuntime: ContentRuntime = runtime;
   const pages: HTMLElement[] = queryAll<HTMLElement>('.lpm-page');
   const navButtons: HTMLButtonElement[] =
     queryAll<HTMLButtonElement>('[data-nav-index]');
   const progress: HTMLProgressElement | null =
     document.querySelector('progress');
+  const quiz: QuizConfig | null = config.quiz;
+  const summary: HTMLElement | null =
+    document.getElementById('lpm-quiz-summary');
   if (pages.length !== config.pages.length) {
     showStatus(
       `Expected ${config.pages.length} pages but found ${pages.length} in the document.`
@@ -91,18 +91,241 @@ function start(): void {
     return;
   }
 
-  const initial: Result<InitialState> = runtime.init();
+  const initial: Result<InitialState> = activeRuntime.init();
   const state: InitialState = initial.ok
     ? initial.value
     : { location: null, suspendData: null, status: null };
   if (!initial.ok) {
     showStatus(`Progress will not be saved: ${initial.error}`);
   }
-  const visited: boolean[] = decodeVisited(state.suspendData, pages.length);
+  const saved = decodeProgress(
+    state.suspendData,
+    pages.length,
+    quiz?.questions.length ?? 0
+  );
+  const visited: boolean[] = [...saved.visited];
+  const answers: (readonly number[] | null)[] = [...saved.answers];
+  let bestPercent: number | null = saved.bestPercent;
   let current: number = Math.max(
     0,
     config.pages.findIndex((page): boolean => page.id === state.location)
   );
+
+  function persist(): void {
+    report(
+      'setSuspendData',
+      activeRuntime.setSuspendData(
+        encodeProgress({ visited, bestPercent, answers })
+      )
+    );
+  }
+
+  // ---- quiz -------------------------------------------------------------
+
+  function questionElement(index: number): HTMLFieldSetElement | null {
+    return document.querySelector<HTMLFieldSetElement>(
+      `[data-question-index="${index}"]`
+    );
+  }
+
+  function setLocked(fieldset: HTMLFieldSetElement, locked: boolean): void {
+    queryAll<HTMLInputElement>('input', fieldset).forEach(
+      (input: HTMLInputElement): void => {
+        input.disabled = locked;
+      }
+    );
+  }
+
+  /** Shows whether an answered question was right, and its explanation. */
+  function markQuestion(index: number): void {
+    const question = quiz?.questions[index];
+    const answer = answers[index];
+    const fieldset: HTMLFieldSetElement | null = questionElement(index);
+    if (
+      question === undefined ||
+      answer === null ||
+      answer === undefined ||
+      fieldset === null
+    ) {
+      return;
+    }
+    queryAll<HTMLInputElement>('input', fieldset).forEach(
+      (input: HTMLInputElement): void => {
+        input.checked = answer.includes(Number(input.value));
+      }
+    );
+    setLocked(fieldset, true);
+    const right: boolean = isCorrect(question, answer);
+    fieldset.classList.toggle('is-correct', right);
+    fieldset.classList.toggle('is-wrong', !right);
+    const feedback: HTMLElement | null =
+      fieldset.querySelector('.lpm-feedback');
+    if (feedback !== null) {
+      feedback.textContent = right ? 'Correct.' : 'Not quite.';
+      feedback.hidden = false;
+    }
+    const explanation: HTMLElement | null =
+      fieldset.querySelector('.lpm-explanation');
+    if (explanation !== null) {
+      explanation.hidden = false;
+    }
+  }
+
+  function clearQuestion(index: number): void {
+    const fieldset: HTMLFieldSetElement | null = questionElement(index);
+    answers[index] = null;
+    if (fieldset === null) {
+      return;
+    }
+    queryAll<HTMLInputElement>('input', fieldset).forEach(
+      (input: HTMLInputElement): void => {
+        input.checked = false;
+      }
+    );
+    setLocked(fieldset, false);
+    fieldset.classList.remove('is-correct', 'is-wrong');
+    queryAll<HTMLElement>('.lpm-feedback, .lpm-explanation', fieldset).forEach(
+      (element: HTMLElement): void => {
+        element.hidden = true;
+      }
+    );
+  }
+
+  function describeSummary(): string {
+    if (quiz === null) return '';
+    const score = scoreQuiz(quiz, answers);
+    if (bestPercent === null) {
+      return score.complete
+        ? ''
+        : 'Answer every question to see your quiz score.';
+    }
+    const best: string = `${reportableScore(bestPercent)}%`;
+    if (quiz.passPercent === null) {
+      return `Quiz score: ${best}.`;
+    }
+    return hasPassed(bestPercent, quiz.passPercent)
+      ? `Quiz score: ${best}. Passed (pass mark ${quiz.passPercent}%).`
+      : `Quiz score: ${best}. Not passed yet (pass mark ${quiz.passPercent}%). You can try again.`;
+  }
+
+  function showSummary(): void {
+    if (summary !== null) {
+      const text: string = describeSummary();
+      summary.textContent = text;
+      summary.hidden = text === '';
+    }
+  }
+
+  /** Reports the best score, and pass or fail, once every question has an answer. */
+  function evaluateQuiz(): void {
+    if (quiz === null) return;
+    const score = scoreQuiz(quiz, answers);
+    if (score.complete) {
+      bestPercent =
+        bestPercent === null
+          ? score.percent
+          : Math.max(bestPercent, score.percent);
+      report(
+        'setScore',
+        activeRuntime.setScore({
+          raw: reportableScore(bestPercent),
+          min: 0,
+          max: 100,
+        })
+      );
+      if (quiz.passPercent !== null) {
+        report(
+          bestPercent >= quiz.passPercent ? 'pass' : 'fail',
+          bestPercent >= quiz.passPercent
+            ? activeRuntime.pass()
+            : activeRuntime.fail()
+        );
+      }
+    }
+    showSummary();
+    persist();
+  }
+
+  function formRange(form: HTMLElement): number[] {
+    const first = Number(form.dataset['quizFirst']);
+    const count = Number(form.dataset['quizCount']);
+    return Array.from(
+      { length: count },
+      (_unused, offset: number): number => first + offset
+    );
+  }
+
+  queryAll<HTMLElement>('.lpm-quiz').forEach((form: HTMLElement): void => {
+    const submitButton: HTMLButtonElement | null = form.querySelector(
+      '[data-action="submit"]'
+    );
+    const retryButton: HTMLButtonElement | null = form.querySelector(
+      '[data-action="retry"]'
+    );
+    const result: HTMLElement | null = form.querySelector('.lpm-quiz-result');
+
+    function refreshForm(): void {
+      const indexes: number[] = formRange(form);
+      const submitted: boolean = indexes.every(
+        (index: number): boolean => answers[index] !== null
+      );
+      if (submitButton !== null) submitButton.hidden = submitted;
+      if (retryButton !== null) retryButton.hidden = !submitted;
+      if (result !== null && quiz !== null) {
+        if (submitted) {
+          const earned: number = indexes.reduce(
+            (sum: number, index: number): number => {
+              const question = quiz.questions[index];
+              const answer = answers[index];
+              return question !== undefined &&
+                answer !== null &&
+                answer !== undefined &&
+                isCorrect(question, answer)
+                ? sum + question.points
+                : sum;
+            },
+            0
+          );
+          const possible: number = indexes.reduce(
+            (sum: number, index: number): number =>
+              sum + (quiz.questions[index]?.points ?? 0),
+            0
+          );
+          result.textContent = `You scored ${earned} of ${possible} points on this page.`;
+        }
+        result.hidden = !submitted;
+      }
+    }
+
+    submitButton?.addEventListener('click', (): void => {
+      for (const index of formRange(form)) {
+        const fieldset: HTMLFieldSetElement | null = questionElement(index);
+        const picked: number[] =
+          fieldset === null
+            ? []
+            : queryAll<HTMLInputElement>('input:checked', fieldset).map(
+                (input: HTMLInputElement): number => Number(input.value)
+              );
+        answers[index] = picked;
+        markQuestion(index);
+      }
+      refreshForm();
+      evaluateQuiz();
+    });
+
+    retryButton?.addEventListener('click', (): void => {
+      formRange(form).forEach(clearQuestion);
+      refreshForm();
+      showSummary();
+      persist();
+    });
+
+    // Restore answers saved in an earlier session.
+    formRange(form).forEach(markQuestion);
+    refreshForm();
+  });
+
+  // ---- pages ------------------------------------------------------------
 
   const show = (index: number): void => {
     current = index;
@@ -123,12 +346,12 @@ function start(): void {
     }
     const page = config.pages[index];
     if (page !== undefined) {
-      report('setLocation', runtime.setLocation(page.id));
+      report('setLocation', activeRuntime.setLocation(page.id));
     }
-    report('setSuspendData', runtime.setSuspendData(encodeVisited(visited)));
-    report('setProgress', runtime.setProgress(seenCount / pages.length));
-    if (seenCount === pages.length) {
-      report('complete', runtime.complete());
+    persist();
+    report('setProgress', activeRuntime.setProgress(seenCount / pages.length));
+    if (config.completion === 'viewAll' && seenCount === pages.length) {
+      report('complete', activeRuntime.complete());
       showStatus('Course complete.');
     } else {
       showStatus(`Page ${index + 1} of ${pages.length}`);
@@ -155,12 +378,13 @@ function start(): void {
   const end = (): void => {
     if (!ended) {
       ended = true;
-      report('terminate', runtime.terminate());
+      report('terminate', activeRuntime.terminate());
     }
   };
   window.addEventListener('pagehide', end);
   window.addEventListener('beforeunload', end);
 
+  showSummary();
   show(current);
 }
 

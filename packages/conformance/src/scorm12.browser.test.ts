@@ -2,7 +2,12 @@ import { afterAll, beforeAll, describe, expect } from 'bun:test';
 import { scorm12Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm12';
 import type { PackageFiles } from '@richardmcquiston01/lms-package-maker-exporters';
 import type { Browser, Page } from 'playwright-core';
-import { bundleCmiHost, HOST_URL, launchBrowser, serve } from './browser';
+import {
+  bundleCmiHost,
+  launchBrowser,
+  openWithCmiStore,
+  type OpenedPackage,
+} from './browser';
 import { sampleCourse } from './fixtures';
 import { loadReactiveLms, testIf, type ReactiveLms } from './reactiveLms';
 
@@ -25,30 +30,8 @@ afterAll(async (): Promise<void> => {
   await browser?.close();
 });
 
-interface Launch {
-  readonly page: Page;
-  readonly problems: string[];
-}
-
-/** Opens the package in a frame whose parent exposes reactive-lms' CmiStore. */
-async function launch(seed: Record<string, unknown>): Promise<Launch> {
-  const page: Page = await (browser as Browser).newPage();
-  const problems: string[] = [];
-  page.on('console', (message): void => {
-    if (message.text().includes('[lms-package]')) {
-      problems.push(message.text());
-    }
-  });
-  page.on('pageerror', (error): void => {
-    problems.push(error.message);
-  });
-  const seedAttribute: string = JSON.stringify(seed).replace(/"/g, '&quot;');
-  const host = `<script data-seed="${seedAttribute}">${cmiHostScript.replace(/<\/script/gi, '<\\/script')}</script><iframe id="f" src="/index.html" width="900" height="600"></iframe>`;
-  await serve(page, host, packageFiles);
-  await page.goto(HOST_URL);
-  await page.frameLocator('#f').locator('[data-action="next"]').waitFor();
-  return { page, problems };
-}
+const launch = (seed: Record<string, unknown>): Promise<OpenedPackage> =>
+  openWithCmiStore(browser as Browser, cmiHostScript, packageFiles, seed);
 
 const snapshot = (page: Page): Promise<Record<string, string>> =>
   page.evaluate(() => (window as any).__store.snapshot());
@@ -78,7 +61,7 @@ describe('SCORM 1.2 package against the real reactive-lms CmiStore', () => {
       });
       expect(progress['completionStatus']).toBe('completed');
       expect(progress['location']).toBe('p3');
-      expect(progress['suspendData']).toBe('111');
+      expect(progress['suspendData']).toBe('v2;111;-;');
       expect(
         await page.evaluate(() => (window as any).__store.isFinished())
       ).toBe(true);
@@ -96,7 +79,7 @@ describe('SCORM 1.2 package against the real reactive-lms CmiStore', () => {
         values: {
           'cmi.core.lesson_status': 'incomplete',
           'cmi.core.lesson_location': 'p2',
-          'cmi.suspend_data': '110',
+          'cmi.suspend_data': 'v2;110;-;',
           'cmi.core.entry': 'resume',
         },
       });

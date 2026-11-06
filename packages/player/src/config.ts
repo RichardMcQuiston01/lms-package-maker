@@ -1,5 +1,25 @@
+/** One question, as the player script needs it to mark answers. */
+export interface QuizQuestionConfig {
+  /** Index of the page that holds the question. */
+  readonly pageIndex: number;
+  readonly kind: 'single' | 'multiple';
+  readonly points: number;
+  readonly choiceCount: number;
+  /** Positions (0-based) of the correct choices. */
+  readonly correct: readonly number[];
+}
+
+export interface QuizConfig {
+  /** Pass mark in percent, or null when the quiz is practice only. */
+  readonly passPercent: number | null;
+  readonly questions: readonly QuizQuestionConfig[];
+}
+
 /** Data the player script reads from `#lpm-config`. */
 export interface PlayerConfig {
   readonly title: string;
   readonly pages: readonly { readonly id: string; readonly title: string }[];
+  /** `viewAll` completes by visiting every page; `passQuiz` by passing the quiz. */
+  readonly completion: 'viewAll' | 'passQuiz';
+  readonly quiz: QuizConfig | null;
 }

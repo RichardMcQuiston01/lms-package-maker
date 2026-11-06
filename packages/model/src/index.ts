@@ -7,3 +7,4 @@ export {
   rewriteMediaReferences,
   type MediaUse,
 } from './media.js';
+export { QUESTION_LIMITS } from './questions.js';

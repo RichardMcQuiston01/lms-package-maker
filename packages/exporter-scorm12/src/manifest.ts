@@ -20,6 +20,11 @@ export function buildScorm12Manifest(
 ): string {
   const courseId: string = toIdentifier(course.id);
   const title: string = escapeHtml(course.title);
+  // With a pass mark, tell the LMS about it (SCORM 1.2 `adlcp:masteryscore`).
+  const masteryScore: string =
+    course.completion.kind === 'passQuiz'
+      ? `\n        <adlcp:masteryscore>${course.completion.minScorePercent}</adlcp:masteryscore>`
+      : '';
   const files: string = [
     PLAYER_ENTRY_PATH,
     ...PLAYER_ASSET_PATHS,
@@ -41,7 +46,7 @@ export function buildScorm12Manifest(
     <organization identifier="ORG-${courseId}">
       <title>${title}</title>
       <item identifier="ITEM-${courseId}" identifierref="RES-${courseId}" isvisible="true">
-        <title>${title}</title>
+        <title>${title}</title>${masteryScore}
       </item>
     </organization>
   </organizations>
