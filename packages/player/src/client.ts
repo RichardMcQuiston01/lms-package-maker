@@ -19,7 +19,9 @@ import type {
  *
  * Completion: with the `viewAll` rule the course is complete once every page
  * was visited. With `passQuiz` it is passed or failed once every question has
- * been answered, using the best score of all attempts.
+ * been answered. Every completed attempt is reported as it happened (its
+ * score and its pass or fail); the system that records the data decides which
+ * attempt counts.
  */
 
 declare global {
@@ -105,7 +107,7 @@ function start(): void {
   );
   const visited: boolean[] = [...saved.visited];
   const answers: (readonly number[] | null)[] = [...saved.answers];
-  let bestPercent: number | null = saved.bestPercent;
+  let lastPercent: number | null = saved.lastPercent;
   let current: number = Math.max(
     0,
     config.pages.findIndex((page): boolean => page.id === state.location)
@@ -115,7 +117,7 @@ function start(): void {
     report(
       'setSuspendData',
       activeRuntime.setSuspendData(
-        encodeProgress({ visited, bestPercent, answers })
+        encodeProgress({ visited, lastPercent, answers })
       )
     );
   }
@@ -194,18 +196,18 @@ function start(): void {
   function describeSummary(): string {
     if (quiz === null) return '';
     const score = scoreQuiz(quiz, answers);
-    if (bestPercent === null) {
+    if (lastPercent === null) {
       return score.complete
         ? ''
         : 'Answer every question to see your quiz score.';
     }
-    const best: string = `${reportableScore(bestPercent)}%`;
+    const latest: string = `${reportableScore(lastPercent)}%`;
     if (quiz.passPercent === null) {
-      return `Quiz score: ${best}.`;
+      return `Quiz score: ${latest}.`;
     }
-    return hasPassed(bestPercent, quiz.passPercent)
-      ? `Quiz score: ${best}. Passed (pass mark ${quiz.passPercent}%).`
-      : `Quiz score: ${best}. Not passed yet (pass mark ${quiz.passPercent}%). You can try again.`;
+    return hasPassed(lastPercent, quiz.passPercent)
+      ? `Quiz score: ${latest}. Passed (pass mark ${quiz.passPercent}%).`
+      : `Quiz score: ${latest}. Not passed (pass mark ${quiz.passPercent}%). You can try again.`;
   }
 
   function showSummary(): void {
@@ -216,29 +218,28 @@ function start(): void {
     }
   }
 
-  /** Reports the best score, and pass or fail, once every question has an answer. */
+  /**
+   * Reports the attempt that was just completed, once every question has an
+   * answer: its score and, with a pass mark, whether it passed.
+   */
   function evaluateQuiz(): void {
     if (quiz === null) return;
     const score = scoreQuiz(quiz, answers);
     if (score.complete) {
-      bestPercent =
-        bestPercent === null
-          ? score.percent
-          : Math.max(bestPercent, score.percent);
+      lastPercent = score.percent;
       report(
         'setScore',
         activeRuntime.setScore({
-          raw: reportableScore(bestPercent),
+          raw: reportableScore(score.percent),
           min: 0,
           max: 100,
         })
       );
       if (quiz.passPercent !== null) {
+        const passed: boolean = hasPassed(score.percent, quiz.passPercent);
         report(
-          bestPercent >= quiz.passPercent ? 'pass' : 'fail',
-          bestPercent >= quiz.passPercent
-            ? activeRuntime.pass()
-            : activeRuntime.fail()
+          passed ? 'pass' : 'fail',
+          passed ? activeRuntime.pass() : activeRuntime.fail()
         );
       }
     }

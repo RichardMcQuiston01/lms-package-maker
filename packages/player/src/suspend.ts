@@ -3,15 +3,15 @@ import type { Answers } from './quiz.js';
 /** Everything the player remembers between sessions. */
 export interface SavedProgress {
   readonly visited: readonly boolean[];
-  /** Best quiz score so far in percent, or null before the first full attempt. */
-  readonly bestPercent: number | null;
+  /** Score of the latest completed attempt in percent, or null before the first one. */
+  readonly lastPercent: number | null;
   readonly answers: Answers;
 }
 
 const FORMAT_MARK = 'v2';
 
 /**
- * `v2;<visited bits>;<best percent or ->;<answers>` where each answer is `-`
+ * `v2;<visited bits>;<latest reported percent or ->;<answers>` where each answer is `-`
  * (not answered) or the picked choice positions as a base-36 bit mask.
  * This stays small: SCORM 1.2 allows only 4096 characters of suspend data.
  */
@@ -19,8 +19,8 @@ export function encodeProgress(progress: SavedProgress): string {
   const bits: string = progress.visited
     .map((seen: boolean): string => (seen ? '1' : '0'))
     .join('');
-  const best: string =
-    progress.bestPercent === null ? '-' : String(progress.bestPercent);
+  const latest: string =
+    progress.lastPercent === null ? '-' : String(progress.lastPercent);
   const answers: string = progress.answers
     .map((answer: readonly number[] | null): string =>
       answer === null
@@ -34,7 +34,7 @@ export function encodeProgress(progress: SavedProgress): string {
             .toString(36)
     )
     .join(',');
-  return [FORMAT_MARK, bits, best, answers].join(';');
+  return [FORMAT_MARK, bits, latest, answers].join(';');
 }
 
 function emptyAnswers(count: number): (readonly number[] | null)[] {
@@ -54,7 +54,7 @@ export function decodeProgress(
   const visited: boolean[] = new Array<boolean>(pageCount).fill(false);
   const fresh: SavedProgress = {
     visited,
-    bestPercent: null,
+    lastPercent: null,
     answers: emptyAnswers(questionCount),
   };
   if (saved === null || saved === '') {
@@ -78,7 +78,7 @@ export function decodeProgress(
   ) {
     return fresh;
   }
-  const best: number = Number(parts[2]);
+  const latest: number = Number(parts[2]);
   const answers: (readonly number[] | null)[] = emptyAnswers(questionCount);
   (parts[3] ?? '').split(',').forEach((token: string, index: number): void => {
     if (index >= questionCount || token === '-' || token === '') {
@@ -96,7 +96,7 @@ export function decodeProgress(
   });
   return {
     visited: readBits(parts[1] ?? ''),
-    bestPercent: parts[2] === '-' || !Number.isFinite(best) ? null : best,
+    lastPercent: parts[2] === '-' || !Number.isFinite(latest) ? null : latest,
     answers,
   };
 }

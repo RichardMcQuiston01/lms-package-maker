@@ -131,7 +131,7 @@ describe('quiz in a SCORM 1.2 package against the real reactive-lms CmiStore', (
   );
 
   testIf(reactiveLms !== null)(
-    'wrong answers fail with a score; a retry that passes reports the best score',
+    'each completed attempt is reported as it happened, so a later worse attempt is reported too',
     async () => {
       const lms = reactiveLms as ReactiveLms;
       const { page, frame, problems } = await openQuizPage();
@@ -148,7 +148,7 @@ describe('quiz in a SCORM 1.2 package against the real reactive-lms CmiStore', (
       ).resolves.toBe(2);
       expect(await frame.locator('.lpm-explanation:visible').count()).toBe(1);
       expect(await frame.locator('#lpm-quiz-summary').textContent()).toContain(
-        'Not passed yet (pass mark 70%)'
+        'Not passed (pass mark 70%)'
       );
 
       // Try again with the right answers.
@@ -167,12 +167,16 @@ describe('quiz in a SCORM 1.2 package against the real reactive-lms CmiStore', (
       expect(progress['successStatus']).toBe('passed');
       expect(progress['scoreScaled']).toBe(1);
 
-      // A worse later attempt does not lower the reported score or the status.
+      // A worse later attempt is reported as it happened. Which attempt counts
+      // (the latest, the best, ...) is for the system that records the result.
       await frame.getByRole('button', { name: 'Try again' }).click();
       await answer(frame, 'Alpha', ['Banana']);
       values = await snapshot(page);
-      expect(values['cmi.core.lesson_status']).toBe('passed');
-      expect(values['cmi.core.score.raw']).toBe('100');
+      expect(values['cmi.core.lesson_status']).toBe('failed');
+      expect(values['cmi.core.score.raw']).toBe('0');
+      expect(await frame.locator('#lpm-quiz-summary').textContent()).toContain(
+        'Quiz score: 0%. Not passed'
+      );
       expect(problems).toEqual([]);
       await page.close();
     },
@@ -194,7 +198,7 @@ describe('quiz in a SCORM 1.2 package against the real reactive-lms CmiStore', (
   );
 
   testIf(reactiveLms !== null)(
-    'resuming restores answers, their marking and the best score from suspend data',
+    'resuming restores answers, their marking and the latest score from suspend data',
     async () => {
       const first = await openQuizPage();
       await answer(first.frame, 'Bravo', ['Apple', 'Cherry']);

@@ -59,10 +59,10 @@ describe('marking', () => {
 });
 
 describe('saved progress', () => {
-  test('round-trips visited pages, best score and answers', () => {
+  test('round-trips visited pages, the latest score and answers', () => {
     const progress = {
       visited: [true, false, true],
-      bestPercent: 80,
+      lastPercent: 80,
       answers: [[1], null, [0, 2]],
     };
     const text: string = encodeProgress(progress);
@@ -73,7 +73,7 @@ describe('saved progress', () => {
   test('still reads the older visited-bits format', () => {
     expect(decodeProgress('110', 3, 2)).toEqual({
       visited: [true, true, false],
-      bestPercent: null,
+      lastPercent: null,
       answers: [null, null],
     });
   });
@@ -82,7 +82,7 @@ describe('saved progress', () => {
     for (const bad of ['garbage', 'v2;xyz;1;2', 'v2;1;2', 'v9;1;-;-', '']) {
       expect(decodeProgress(bad, 2, 1)).toEqual({
         visited: [false, false],
-        bestPercent: null,
+        lastPercent: null,
         answers: [null],
       });
     }
@@ -101,7 +101,7 @@ describe('saved progress', () => {
     ]);
     const text: string = encodeProgress({
       visited: new Array(100).fill(true),
-      bestPercent: 99.99,
+      lastPercent: 99.99,
       answers,
     });
     expect(text.length).toBeLessThan(1500);
