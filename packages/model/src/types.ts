@@ -10,11 +10,36 @@ export type CompletionRule =
   | { readonly kind: 'viewAll' }
   | { readonly kind: 'passQuiz'; readonly minScorePercent: number };
 
+export interface Choice {
+  readonly id: string;
+  /** Plain text; it is escaped wherever it is shown. */
+  readonly text: string;
+}
+
+/**
+ * A multiple-choice question. `single` has exactly one right answer;
+ * `multiple` is right only when the learner picks exactly the right set.
+ */
+export interface Question {
+  readonly id: string;
+  readonly kind: 'single' | 'multiple';
+  /** Plain text; it is escaped wherever it is shown. */
+  readonly prompt: string;
+  readonly choices: readonly Choice[];
+  readonly correctChoiceIds: readonly string[];
+  /** Whole points the question is worth. */
+  readonly points: number;
+  /** Plain text shown after the learner answers. */
+  readonly explanation?: string;
+}
+
 export interface Page {
   readonly id: string;
   readonly title: string;
   /** Sanitised HTML body for this page. */
   readonly html: string;
+  /** Questions shown under the body. A page with questions is a quiz page. */
+  readonly questions?: readonly Question[];
 }
 
 export interface Module {

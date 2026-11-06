@@ -181,3 +181,112 @@ describe('downloadFileName', () => {
     expect(downloadFileName('???', 'html5')).toBe('course-html5.zip');
   });
 });
+
+describe('quiz courses', () => {
+  const question = {
+    id: 'q1',
+    kind: 'single',
+    prompt: 'Is <b>this</b> safe?',
+    choices: [
+      { id: 'a', text: 'Yes' },
+      { id: 'b', text: 'No' },
+    ],
+    correctChoiceIds: ['a'],
+    points: 2,
+    explanation: 'It is escaped.',
+  };
+
+  async function quizCourse(completion: unknown) {
+    const ctx = createTestServices();
+    const created = await ctx.service.create(OWNER, { title: 'Quiz' });
+    if (!created.ok) throw new Error('create failed');
+    const page = created.value.course.modules[0]?.pages[0];
+    return {
+      ...ctx,
+      id: created.value.id,
+      course: {
+        ...created.value.course,
+        completion,
+        modules: [
+          {
+            ...created.value.course.modules[0],
+            pages: [{ ...page, questions: [question] }],
+          },
+        ],
+      },
+    };
+  }
+
+  test('saves questions and a pass mark and exports them', async () => {
+    const { service, id, course } = await quizCourse({
+      kind: 'passQuiz',
+      minScorePercent: 80,
+    });
+    const saved = await service.saveCourse(id, OWNER, course);
+    expect(saved.ok && saved.value.course.completion).toEqual({
+      kind: 'passQuiz',
+      minScorePercent: 80,
+    });
+    expect(
+      saved.ok && saved.value.course.modules[0]?.pages[0]?.questions?.length
+    ).toBe(1);
+
+    const { unzipSync } = await import('fflate');
+    const scorm = await service.exportProject(id, OWNER, 'scorm12');
+    if (!scorm.ok) throw new Error(scorm.errors.join('; '));
+    const files = unzipSync(scorm.value.bytes);
+    expect(new TextDecoder().decode(files['imsmanifest.xml'])).toContain(
+      '<adlcp:masteryscore>80</adlcp:masteryscore>'
+    );
+    const html = new TextDecoder().decode(files['index.html']);
+    expect(html).toContain('Is &lt;b&gt;this&lt;/b&gt; safe?');
+    expect(html).toContain('class="lpm-quiz"');
+    expect(html).not.toContain('<b>this</b>');
+  });
+
+  test('refuses a pass mark without questions, naming the rule', async () => {
+    const { service, id, course } = await quizCourse({
+      kind: 'passQuiz',
+      minScorePercent: 80,
+    });
+    const noQuestions = {
+      ...course,
+      modules: [
+        {
+          ...course.modules[0],
+          pages: [{ ...course.modules[0]?.pages[0], questions: undefined }],
+        },
+      ],
+    };
+    const result = await service.saveCourse(id, OWNER, noQuestions);
+    expect(result).toMatchObject({ ok: false, kind: 'invalid' });
+    if (!result.ok)
+      expect(result.errors.join(' ')).toContain(
+        "'passQuiz' but the course has no questions"
+      );
+  });
+
+  test('refuses a broken question with its path', async () => {
+    const { service, id, course } = await quizCourse({ kind: 'viewAll' });
+    const broken = {
+      ...course,
+      modules: [
+        {
+          ...course.modules[0],
+          pages: [
+            {
+              ...course.modules[0]?.pages[0],
+              questions: [{ ...question, correctChoiceIds: ['zzz'] }],
+            },
+          ],
+        },
+      ],
+    };
+    const result = await service.saveCourse(id, OWNER, broken);
+    expect(result).toMatchObject({ ok: false, kind: 'invalid' });
+    if (!result.ok)
+      expect(result.errors.join(' ')).toContain(
+        'questions[0].correctChoiceIds names choices that do not exist: zzz'
+      );
+  });
+});

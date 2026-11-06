@@ -18,6 +18,11 @@ import { previewLinkRequest, saveCourseRequest } from '../lib/apiClient';
 import {
   addModule,
   addPage,
+  addQuestion,
+  moveQuestion,
+  removeQuestion,
+  replaceQuestion,
+  setCompletion,
   findModuleOfPage,
   firstPage,
   moveModule,
@@ -30,10 +35,13 @@ import {
 } from '../lib/courseEdit';
 import type { MediaJson } from '../lib/api/mediaHandlers';
 import { insertAt } from '../lib/htmlSnippets';
+import { newQuestion } from '../lib/questionEdit';
 import { newClientId } from '../lib/ids';
+import { CompletionSettings } from './CompletionSettings';
 import { MediaPanel } from './MediaPanel';
 import { OutlinePanel, type OutlineActions } from './OutlinePanel';
 import { PagePanel } from './PagePanel';
+import { QuestionsPanel } from './QuestionsPanel';
 import { PreviewPane } from './PreviewPane';
 
 interface CourseEditorProps {
@@ -283,6 +291,10 @@ export function CourseEditor({
             selectedPageId={selectedPageId}
             actions={actions}
           />
+          <CompletionSettings
+            course={course}
+            onChange={(rule): void => setCourse(setCompletion(course, rule))}
+          />
           <MediaPanel
             projectId={projectId}
             initialMedia={initialMedia}
@@ -302,6 +314,38 @@ export function CourseEditor({
                 applyEdit(updatePage(course, selectedPageId, { html }));
             }}
           />
+          {selectedPage !== null && (
+            <QuestionsPanel
+              page={selectedPage}
+              onAdd={(): void =>
+                applyEdit(
+                  addQuestion(
+                    course,
+                    selectedPage.id,
+                    newQuestion('single', {
+                      question: newClientId(),
+                      choiceA: newClientId(),
+                      choiceB: newClientId(),
+                    })
+                  )
+                )
+              }
+              onChange={(question): void =>
+                applyEdit(replaceQuestion(course, selectedPage.id, question))
+              }
+              onRemove={(questionId): void =>
+                applyEdit(removeQuestion(course, selectedPage.id, questionId))
+              }
+              onMove={(questionId, direction): void =>
+                applyEdit(
+                  moveQuestion(course, selectedPage.id, questionId, direction)
+                )
+              }
+              onProblem={(message): void =>
+                setStatus({ kind: 'error', message })
+              }
+            />
+          )}
         </main>
         <PreviewPane
           previewUrl={previewUrl}

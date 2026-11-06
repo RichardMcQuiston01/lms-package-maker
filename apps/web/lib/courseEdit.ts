@@ -1,8 +1,11 @@
-import type {
-  CourseModel,
-  Module,
-  Page,
-  Result,
+import {
+  QUESTION_LIMITS,
+  type CompletionRule,
+  type CourseModel,
+  type Module,
+  type Page,
+  type Question,
+  type Result,
 } from '@richardmcquiston01/lms-package-maker-model';
 
 /**
@@ -246,4 +249,112 @@ export function moveModule(
 /** The first page of a course, used to pick what the editor shows first. */
 export function firstPage(course: CourseModel): Page | undefined {
   return course.modules[0]?.pages[0];
+}
+
+/** How many questions the whole course holds. */
+export function countQuestions(course: CourseModel): number {
+  return course.modules.reduce(
+    (total: number, courseModule: Module): number =>
+      total +
+      courseModule.pages.reduce(
+        (pageTotal: number, page: Page): number =>
+          pageTotal + (page.questions?.length ?? 0),
+        0
+      ),
+    0
+  );
+}
+
+export function setCompletion(
+  course: CourseModel,
+  completion: CompletionRule
+): CourseModel {
+  return { ...course, completion };
+}
+
+function withQuestions(
+  course: CourseModel,
+  pageId: string,
+  change: (questions: readonly Question[]) => readonly Question[]
+): Result<CourseModel> {
+  const owner: Module | undefined = findModuleOfPage(course, pageId);
+  if (owner === undefined) {
+    return failure(
+      `page '${pageId}' does not exist, so its questions cannot be changed`
+    );
+  }
+  return {
+    ok: true,
+    value: mapModule(course, owner.id, (courseModule: Module): Module => ({
+      ...courseModule,
+      pages: courseModule.pages.map((page: Page): Page => {
+        if (page.id !== pageId) return page;
+        const questions: readonly Question[] = change(page.questions ?? []);
+        const { questions: _previous, ...rest } = page;
+        // A page without questions carries no empty list.
+        return questions.length === 0 ? rest : { ...rest, questions };
+      }),
+    })),
+  };
+}
+
+export function addQuestion(
+  course: CourseModel,
+  pageId: string,
+  question: Question
+): Result<CourseModel> {
+  const page: Page | undefined = findModuleOfPage(course, pageId)?.pages.find(
+    (entry: Page): boolean => entry.id === pageId
+  );
+  if ((page?.questions?.length ?? 0) >= QUESTION_LIMITS.maxQuestionsPerPage) {
+    return failure(
+      `a page can hold at most ${QUESTION_LIMITS.maxQuestionsPerPage} questions`
+    );
+  }
+  if (countQuestions(course) >= QUESTION_LIMITS.maxQuestionsPerCourse) {
+    return failure(
+      `a course can hold at most ${QUESTION_LIMITS.maxQuestionsPerCourse} questions`
+    );
+  }
+  return withQuestions(course, pageId, (questions) => [...questions, question]);
+}
+
+export function replaceQuestion(
+  course: CourseModel,
+  pageId: string,
+  question: Question
+): Result<CourseModel> {
+  return withQuestions(course, pageId, (questions) =>
+    questions.map((entry: Question): Question =>
+      entry.id === question.id ? question : entry
+    )
+  );
+}
+
+export function removeQuestion(
+  course: CourseModel,
+  pageId: string,
+  questionId: string
+): Result<CourseModel> {
+  return withQuestions(course, pageId, (questions) =>
+    questions.filter((entry: Question): boolean => entry.id !== questionId)
+  );
+}
+
+/** Moves a question one place up (-1) or down (1) on its page. */
+export function moveQuestion(
+  course: CourseModel,
+  pageId: string,
+  questionId: string,
+  direction: -1 | 1
+): Result<CourseModel> {
+  return withQuestions(course, pageId, (questions) => {
+    const index: number = questions.findIndex(
+      (entry: Question): boolean => entry.id === questionId
+    );
+    const target: number = index + direction;
+    if (index === -1 || target < 0 || target >= questions.length)
+      return questions;
+    return swap(questions, index, target);
+  });
 }

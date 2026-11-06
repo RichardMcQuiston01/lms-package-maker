@@ -96,4 +96,39 @@ export async function serve(
   });
 }
 
+export interface OpenedPackage {
+  readonly page: Page;
+  /** Messages from the runtime or the page that point at a problem. */
+  readonly problems: string[];
+}
+
+/**
+ * Opens a package in a frame whose parent page exposes reactive-lms' real
+ * CmiStore as `window.API`. `seed` is passed to the CmiStore constructor, for
+ * example to start from saved progress.
+ */
+export async function openWithCmiStore(
+  browser: Browser,
+  cmiHostScript: string,
+  files: PackageFiles,
+  seed: Record<string, unknown>
+): Promise<OpenedPackage> {
+  const page: Page = await browser.newPage();
+  const problems: string[] = [];
+  page.on('console', (message): void => {
+    if (message.text().includes('[lms-package]')) {
+      problems.push(message.text());
+    }
+  });
+  page.on('pageerror', (error): void => {
+    problems.push(error.message);
+  });
+  const seedAttribute: string = JSON.stringify(seed).replace(/"/g, '&quot;');
+  const host = `<script data-seed="${seedAttribute}">${cmiHostScript.replace(/<\/script/gi, '<\\/script')}</script><iframe id="f" src="/index.html" width="900" height="600"></iframe>`;
+  await serve(page, host, files);
+  await page.goto(HOST_URL);
+  await page.frameLocator('#f').locator('[data-action="next"]').waitFor();
+  return { page, problems };
+}
+
 export const HOST_URL = `${ORIGIN}/host.html`;
