@@ -42,4 +42,6 @@ jobs:
       - name: Apply database migrations
         run: bun run --cwd apps/web prisma:deploy
       - run: bun run typecheck
+      - name: Build the web app (browser tests run against it)
+        run: bun run build:web
       - run: bun run test

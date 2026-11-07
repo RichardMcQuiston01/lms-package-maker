@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+**/dist
+**/.next
+.cache
+.git
+.github
+apps/web/data
+apps/web/.env
+**/*.tsbuildinfo
+Dockerfile
+docker-compose.yml

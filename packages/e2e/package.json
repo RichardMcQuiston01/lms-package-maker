@@ -1,0 +1,11 @@
+{
+  "name": "@richardmcquiston01/lms-package-maker-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Browser tests of the built authoring app",
+  "type": "module",
+  "devDependencies": {
+    "fflate": "^0.8.3",
+    "playwright-core": "1.63.0"
+  }
+}

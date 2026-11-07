@@ -1,0 +1,40 @@
+# Runs the app with its own PostgreSQL. Copy .env.example to .env and set AUTH_SECRET first.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: lms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lms-change-me}
+      POSTGRES_DB: lms_package_maker
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lms -d lms_package_maker']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '3000:3000'
+    environment:
+      # The entrypoint builds DATABASE_URL from these and URL-encodes the password,
+      # so it may contain characters such as @ / : # %.
+      DATABASE_HOST: db
+      DATABASE_USER: lms
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-lms-change-me}
+      DATABASE_NAME: lms_package_maker
+      # Required: at least 32 random characters (openssl rand -base64 48).
+      AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env}
+      ALLOW_SIGN_UP: ${ALLOW_SIGN_UP:-false}
+      IDENTITY_PROVIDER: ${IDENTITY_PROVIDER:-builtin}
+    volumes:
+      - lms-data:/data
+
+volumes:
+  db-data:
+  lms-data:
