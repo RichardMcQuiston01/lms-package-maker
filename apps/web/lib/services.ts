@@ -1,6 +1,7 @@
 import { html5Exporter } from '@richardmcquiston01/lms-package-maker-exporter-html5';
 import { scorm12Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm12';
 import { scorm2004Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm2004';
+import { cmi5Exporter } from '@richardmcquiston01/lms-package-maker-exporter-cmi5';
 import { xapiExporter } from '@richardmcquiston01/lms-package-maker-exporter-xapi';
 import { getAuthSecret, getDataDirectory, isSignUpAllowed } from './config';
 import { getPrismaClient } from './db';
@@ -74,6 +75,7 @@ export function getServices(): Services {
           scorm12: scorm12Exporter,
           scorm2004: scorm2004Exporter,
           xapi: xapiExporter,
+          cmi5: cmi5Exporter,
         },
         media,
         newId,

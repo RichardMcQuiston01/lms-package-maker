@@ -1,5 +1,12 @@
 import { formatIsoDuration } from './scorm2004.js';
 import {
+  XapiTransport,
+  type XapiConnection,
+  type XapiEnvironment,
+} from './xapiTransport.js';
+
+export type { XapiEnvironment } from './xapiTransport.js';
+import {
   fail,
   ok,
   type InitialState,
@@ -9,47 +16,19 @@ import {
   type Score,
 } from './types.js';
 
-const XAPI_VERSION = '1.0.3';
 const STATE_ID = 'lms-package-maker.state';
 const VERB_BASE = 'http://adlnet.gov/expapi/verbs/';
 const COURSE_TYPE = 'http://adlnet.gov/expapi/activities/course';
 const PLATFORM = 'lms-package-maker';
 
 /** What the LRS passes to the launch URL (the TinCan launch convention). */
-export interface XapiLaunch {
-  /** LRS base address without a trailing slash. */
-  readonly endpoint: string;
-  /** Full `Authorization` header value, or null when the LRS needs none. */
-  readonly auth: string | null;
-  /** The learner, as an xAPI Agent. */
-  readonly actor: Readonly<Record<string, unknown>>;
-  readonly registration: string | null;
-}
+export type XapiLaunch = XapiConnection;
 
 /** The course as an xAPI Activity. */
 export interface XapiContent {
   readonly activityId: string;
   readonly name: string;
   readonly language: string;
-}
-
-/** Browser services the adapter needs; tests replace them. */
-export interface XapiEnvironment {
-  readonly fetch: (
-    url: string,
-    init: {
-      method: string;
-      headers: Record<string, string>;
-      body?: string;
-      keepalive: boolean;
-    }
-  ) => Promise<{
-    readonly status: number;
-    readonly ok: boolean;
-    text(): Promise<string>;
-  }>;
-  readonly now: () => Date;
-  readonly newId: () => string;
 }
 
 /**
@@ -148,6 +127,24 @@ function readSavedState(text: string): SavedState {
   };
 }
 
+/** An xAPI score object, with the scaled value (-1 to 1) worked out. */
+export function scoreResult(score: Score): Record<string, number> {
+  const range: number = score.max - score.min;
+  return {
+    raw: score.raw,
+    min: score.min,
+    max: score.max,
+    ...(range > 0
+      ? {
+          scaled: Math.min(
+            1,
+            Math.max(-1, Number(((score.raw - score.min) / range).toFixed(7)))
+          ),
+        }
+      : {}),
+  };
+}
+
 /** A version 4 UUID, using the browser's generator when it has one. */
 export function newUuid(): string {
   const generator: Crypto | undefined = globalThis.crypto;
@@ -199,58 +196,15 @@ export function createXapiAdapter(
     progress: null,
   };
   let lastScore: Score | null = null;
-  let queue: Promise<void> = Promise.resolve();
+  const transport: XapiTransport = new XapiTransport(launch, environment);
   let stateDirty = false;
   let stateQueued = false;
-
-  const headers = (
-    extra: Record<string, string> = {}
-  ): Record<string, string> => ({
-    'X-Experience-API-Version': XAPI_VERSION,
-    ...(launch.auth === null ? {} : { Authorization: launch.auth }),
-    ...extra,
-  });
-
-  function stateUrl(): string {
-    const query: URLSearchParams = new URLSearchParams({
-      stateId: STATE_ID,
-      activityId: content.activityId,
-      agent: JSON.stringify(launch.actor),
-    });
-    if (launch.registration !== null) {
-      query.set('registration', launch.registration);
-    }
-    return `${launch.endpoint}/activities/state?${query.toString()}`;
-  }
-
-  function enqueue(label: string, send: () => Promise<void>): void {
-    queue = queue.then(send).catch((cause: unknown): void => {
-      const reason: string =
-        cause instanceof Error ? cause.message : String(cause);
-      console.error(`[lms-package] xAPI ${label} failed: ${reason}`);
-    });
-  }
-
-  async function request(
-    method: string,
-    url: string,
-    body: string | undefined
-  ): Promise<{ status: number; ok: boolean; text(): Promise<string> }> {
-    return environment.fetch(url, {
-      method,
-      headers: headers(
-        body === undefined ? {} : { 'Content-Type': 'application/json' }
-      ),
-      ...(body === undefined ? {} : { body }),
-      keepalive: true,
-    });
-  }
 
   function sendStatement(
     verb: string,
     result: Record<string, unknown> | null
   ): void {
-    const statement: Record<string, unknown> = {
+    transport.postStatement(`'${verb}' statement`, {
       id: environment.newId(),
       actor: launch.actor,
       verb: { id: `${VERB_BASE}${verb}` },
@@ -270,36 +224,7 @@ export function createXapiAdapter(
           : { registration: launch.registration }),
       },
       timestamp: environment.now().toISOString(),
-    };
-    enqueue(`'${verb}' statement`, async (): Promise<void> => {
-      const response = await request(
-        'POST',
-        `${launch.endpoint}/statements`,
-        JSON.stringify(statement)
-      );
-      if (!response.ok) {
-        throw new Error(
-          `the LRS answered ${response.status}: ${await response.text()}`
-        );
-      }
     });
-  }
-
-  function scoreResult(score: Score): Record<string, number> {
-    const range: number = score.max - score.min;
-    return {
-      raw: score.raw,
-      min: score.min,
-      max: score.max,
-      ...(range > 0
-        ? {
-            scaled: Math.min(
-              1,
-              Math.max(-1, Number(((score.raw - score.min) / range).toFixed(7)))
-            ),
-          }
-        : {}),
-    };
   }
 
   /** Writes the state document; changes made while a write runs are sent next. */
@@ -309,12 +234,12 @@ export function createXapiAdapter(
       return ok();
     }
     stateQueued = true;
-    enqueue('state save', async (): Promise<void> => {
+    transport.enqueue('state save', async (): Promise<void> => {
       while (stateDirty) {
         stateDirty = false;
-        const response = await request(
+        const response = await transport.request(
           'PUT',
-          stateUrl(),
+          transport.stateUrl(STATE_ID, content.activityId),
           JSON.stringify(saved)
         );
         if (!response.ok) {
@@ -335,7 +260,11 @@ export function createXapiAdapter(
       fail('the xAPI adapter starts asynchronously; use start()'),
     async initializeAsync(): Promise<Result<InitialState>> {
       try {
-        const response = await request('GET', stateUrl(), undefined);
+        const response = await transport.request(
+          'GET',
+          transport.stateUrl(STATE_ID, content.activityId),
+          undefined
+        );
         if (response.ok) {
           Object.assign(saved, readSavedState(await response.text()));
         } else if (response.status !== 404) {

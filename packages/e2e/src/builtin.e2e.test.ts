@@ -110,6 +110,10 @@ e2eTest(
       const xapiFiles: string[] = Object.keys(unzipSync(xapi.bytes));
       expect(xapiFiles).toContain('tincan.xml');
       expect(xapiFiles.some((name) => name.startsWith('media/'))).toBe(true);
+      const cmi5 = await exportPackage(page, 'Export cmi5');
+      const cmi5Files: string[] = Object.keys(unzipSync(cmi5.bytes));
+      expect(cmi5Files).toContain('cmi5.xml');
+      expect(cmi5Files).not.toContain('tincan.xml');
       const html5 = await exportPackage(page, 'Export HTML5');
       expect(Object.keys(unzipSync(html5.bytes))).toContain('index.html');
 

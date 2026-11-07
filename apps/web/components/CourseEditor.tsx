@@ -62,6 +62,7 @@ const EXPORT_BUTTONS: readonly { standard: string; label: string }[] = [
   { standard: 'scorm12', label: 'Export SCORM 1.2' },
   { standard: 'scorm2004', label: 'Export SCORM 2004' },
   { standard: 'xapi', label: 'Export xAPI' },
+  { standard: 'cmi5', label: 'Export cmi5' },
   { standard: 'html5', label: 'Export HTML5' },
 ];
 

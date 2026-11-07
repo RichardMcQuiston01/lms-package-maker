@@ -394,6 +394,25 @@ async function start(): Promise<void> {
   window.addEventListener('pagehide', end);
   window.addEventListener('beforeunload', end);
 
+  // "Exit course" (cmi5): end the session on purpose, then let the adapter
+  // finish (cmi5 sends its last statements and returns to the LMS).
+  document
+    .querySelector<HTMLButtonElement>('[data-action="exit"]')
+    ?.addEventListener('click', (event: MouseEvent): void => {
+      const button = event.currentTarget as HTMLButtonElement;
+      button.disabled = true;
+      ended = true;
+      showStatus('Ending the session…');
+      void activeRuntime.exit().then((result: Result<null>): void => {
+        report('exit', result);
+        showStatus(
+          result.ok
+            ? 'The session has ended. You can close this window.'
+            : `The session could not be ended cleanly: ${result.error}`
+        );
+      });
+    });
+
   showSummary();
   show(current);
 }

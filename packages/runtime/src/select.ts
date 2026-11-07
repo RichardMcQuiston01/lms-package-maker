@@ -7,6 +7,13 @@ import {
   type Scorm12Api,
 } from './scorm12.js';
 import {
+  createCmi5Adapter,
+  parseCmi5Launch,
+  type Cmi5Content,
+  type Cmi5Launch,
+  type Cmi5Redirect,
+} from './cmi5.js';
+import {
   createUnavailableAdapter,
   createXapiAdapter,
   newUuid,
@@ -28,7 +35,17 @@ export interface HostWindow extends ApiWindow {
 }
 
 /** The LMS API a package asks to try first. */
-export type PreferredApi = 'scorm12' | 'scorm2004' | 'xapi';
+export type PreferredApi = 'scorm12' | 'scorm2004' | 'xapi' | 'cmi5';
+
+/** What the cmi5 adapter needs to know about its surroundings. */
+export interface Cmi5Setup {
+  readonly content: Cmi5Content;
+  /** The launch URL's query string, such as `window.location.search`. */
+  readonly search: string;
+  readonly environment?: XapiEnvironment;
+  /** Leaves the page for the LMS's return address; defaults to navigating. */
+  readonly redirect?: Cmi5Redirect;
+}
 
 /** What the xAPI adapter needs to know about its surroundings. */
 export interface XapiSetup {
@@ -47,8 +64,25 @@ export interface XapiSetup {
 export function selectAdapter(
   host: HostWindow,
   preferred: PreferredApi = 'scorm12',
-  xapi?: XapiSetup
+  xapi?: XapiSetup,
+  cmi5?: Cmi5Setup
 ): RuntimeAdapter {
+  if (preferred === 'cmi5' && cmi5 !== undefined) {
+    const launch: Result<Cmi5Launch | null> = parseCmi5Launch(cmi5.search);
+    if (!launch.ok) {
+      return createUnavailableAdapter('cmi5', launch.error);
+    }
+    if (launch.value !== null) {
+      return createCmi5Adapter(
+        launch.value,
+        cmi5.content,
+        cmi5.environment ?? browserEnvironment(),
+        cmi5.redirect ?? ((url: string): void => window.location.assign(url))
+      );
+    }
+    // Not launched by an LMS (a preview, or opened from disk): run standalone.
+    return createStandaloneAdapter();
+  }
   if (preferred === 'xapi' && xapi !== undefined) {
     const launch: Result<XapiLaunch | null> = parseXapiLaunch(xapi.search);
     if (!launch.ok) {

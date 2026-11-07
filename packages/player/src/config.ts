@@ -26,7 +26,7 @@ export interface PlayerConfig {
    * The LMS API the runtime should try first when a host offers several.
    * Absent means the default order (SCORM 1.2, then SCORM 2004).
    */
-  readonly runtimeApi?: 'scorm2004' | 'xapi';
+  readonly runtimeApi?: 'scorm2004' | 'xapi' | 'cmi5';
   /** The course as an xAPI Activity; present for xAPI packages. */
   readonly xapi?: { readonly activityId: string };
   /** Course language, used to label the xAPI activity name. */
