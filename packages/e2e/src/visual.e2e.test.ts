@@ -178,3 +178,108 @@ e2eTest(
   },
   120_000
 );
+
+e2eTest(
+  'visual editor: the toolbar is one tab stop and works from the keyboard',
+  async (): Promise<void> => {
+    const app: RunningApp = await startApp({
+      IDENTITY_PROVIDER: 'single-user',
+      IDENTITY_SINGLE_USER_ACKNOWLEDGED: 'true',
+      SINGLE_USER_NAME: 'Keyboard Author',
+    });
+    const browser: Browser = await launchBrowser();
+    const page: Page = await (await browser.newContext()).newPage();
+    const focused = (): Promise<string> =>
+      page.evaluate(
+        () =>
+          document.activeElement?.getAttribute('aria-label') ??
+          document.activeElement?.id ??
+          document.activeElement?.tagName ??
+          ''
+      );
+    const tabStops = (): Promise<number> =>
+      page
+        .getByRole('toolbar', { name: 'Formatting' })
+        .locator('[data-toolbar-item]:not([tabindex="-1"])')
+        .count();
+    try {
+      await createCourse(page, app.baseUrl, 'Keyboard course');
+      await page.getByRole('textbox', { name: 'Page content' }).waitFor();
+      await editor(page).fill('keys');
+      await settle(page);
+
+      // exactly one control in the toolbar can be reached with Tab
+      expect(await tabStops()).toBe(1);
+
+      // Shift+Tab from the editor lands on that one control (the style list)
+      await page.keyboard.press('Shift+Tab');
+      expect(await focused()).toBe('lpm-block-style');
+
+      // arrows move along the toolbar, wrapping at both ends
+      await page.keyboard.press('ArrowRight');
+      expect(await focused()).toBe('Bold');
+      await page.keyboard.press('ArrowRight');
+      expect(await focused()).toBe('Italic');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+      expect(await focused()).toBe('lpm-block-style');
+      await page.keyboard.press('ArrowLeft');
+      // Redo is disabled (nothing to redo), so the last control is Undo
+      expect(await focused()).toBe('Undo');
+      await page.keyboard.press('ArrowRight');
+      expect(await focused()).toBe('lpm-block-style');
+      await page.keyboard.press('End');
+      expect(await focused()).toBe('Undo');
+      await page.keyboard.press('Home');
+      expect(await focused()).toBe('lpm-block-style');
+
+      // the arrow keys never change the text-style list
+      expect(await page.getByLabel('Text style').inputValue()).toBe('p');
+
+      // the control last used stays the tab stop
+      await page.keyboard.press('ArrowRight');
+      expect(await tabStops()).toBe(1);
+      await page.keyboard.press('Tab');
+      expect(await focused()).toBe('Page content');
+      await page.keyboard.press('Shift+Tab');
+      expect(await focused()).toBe('Bold');
+
+      // Space presses a button; focus stays on it so several can be pressed
+      await page.keyboard.press('Space');
+      expect(
+        await page
+          .getByRole('button', { name: 'Bold' })
+          .getAttribute('aria-pressed')
+      ).toBe('true');
+      expect(await focused()).toBe('Bold');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('Enter');
+      expect(
+        await page
+          .getByRole('button', { name: 'Italic' })
+          .getAttribute('aria-pressed')
+      ).toBe('true');
+
+      // Escape returns to the text
+      await page.keyboard.press('Escape');
+      await settle(page);
+      expect(await focused()).toBe('Page content');
+
+      // a control that becomes disabled gives up its tab stop
+      await page.getByRole('button', { name: 'Undo' }).waitFor();
+      expect(await tabStops()).toBe(1);
+
+      // the link address field takes focus when opened and Escape closes it
+      await page.getByRole('button', { name: 'Link' }).click();
+      expect(await focused()).toBe('lpm-link-url');
+      await page.keyboard.press('Escape');
+      expect(await page.getByLabel('Link address').count()).toBe(0);
+      await settle(page);
+      expect(await focused()).toBe('Page content');
+    } finally {
+      await browser.close();
+      await app.stop();
+    }
+  },
+  120_000
+);

@@ -4,9 +4,12 @@ import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import type { Editor } from '@tiptap/react';
 import {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useMemo,
+  useRef,
   useState,
+  type KeyboardEvent,
   type ForwardedRef,
   type ReactNode,
 } from 'react';
@@ -51,6 +54,7 @@ function ToolbarButton({
       aria-label={label}
       title={label}
       aria-pressed={active === undefined ? undefined : active}
+      data-toolbar-item=""
       disabled={disabled}
       // A mouse click must not pull focus (and the caret) out of the editor.
       onMouseDown={(event): void => event.preventDefault()}
@@ -91,7 +95,81 @@ function Toolbar({ editor }: { readonly editor: Editor }): ReactNode {
       canRedo: current.can().redo(),
     }),
   });
+  // Formatting keeps focus where it is, so a keyboard user can press several
+  // toolbar buttons in a row. `chain` moves focus into the editor, for actions
+  // after which the author carries on typing (a new table, an applied link).
+  const act = (): ReturnType<Editor['chain']> => editor.chain();
   const chain = (): ReturnType<Editor['chain']> => editor.chain().focus();
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const activeItem = useRef<HTMLElement | null>(null);
+
+  /** The controls the arrow keys move between, in page order. */
+  function items(): HTMLElement[] {
+    const root: HTMLDivElement | null = toolbarRef.current;
+    if (root === null) {
+      return [];
+    }
+    return [
+      ...root.querySelectorAll<HTMLElement>('[data-toolbar-item]'),
+    ].filter(
+      (item: HTMLElement): boolean => !(item as HTMLButtonElement).disabled
+    );
+  }
+
+  /** Exactly one control is a tab stop (the one used last); the rest are -1. */
+  function syncTabStops(): void {
+    const root: HTMLDivElement | null = toolbarRef.current;
+    if (root === null) {
+      return;
+    }
+    const available: HTMLElement[] = items();
+    const active: HTMLElement | undefined =
+      activeItem.current !== null && available.includes(activeItem.current)
+        ? activeItem.current
+        : available[0];
+    activeItem.current = active ?? null;
+    root
+      .querySelectorAll<HTMLElement>('[data-toolbar-item]')
+      .forEach((item: HTMLElement): void => {
+        item.tabIndex = item === active ? 0 : -1;
+      });
+  }
+
+  // Controls appear, disappear and become disabled as the selection changes.
+  useEffect(syncTabStops);
+
+  function handleToolbarKeys(event: KeyboardEvent<HTMLDivElement>): void {
+    const target: HTMLElement = event.target as HTMLElement;
+    if (!target.hasAttribute('data-toolbar-item')) {
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      editor.commands.focus();
+      return;
+    }
+    const available: HTMLElement[] = items();
+    const index: number = available.indexOf(target);
+    let next: number | null = null;
+    switch (event.key) {
+      case 'ArrowRight':
+        next = (index + 1) % available.length;
+        break;
+      case 'ArrowLeft':
+        next = (index - 1 + available.length) % available.length;
+        break;
+      case 'Home':
+        next = 0;
+        break;
+      case 'End':
+        next = available.length - 1;
+        break;
+      default:
+        return;
+    }
+    event.preventDefault();
+    available[next]?.focus();
+  }
 
   function applyLink(): void {
     const address: string = linkUrl.trim();
@@ -105,8 +183,18 @@ function Toolbar({ editor }: { readonly editor: Editor }): ReactNode {
 
   return (
     <div
+      ref={toolbarRef}
       role="toolbar"
       aria-label="Formatting"
+      aria-orientation="horizontal"
+      onKeyDown={handleToolbarKeys}
+      onFocus={(event): void => {
+        const target: HTMLElement = event.target as HTMLElement;
+        if (target.hasAttribute('data-toolbar-item')) {
+          activeItem.current = target;
+          syncTabStops();
+        }
+      }}
       className="space-y-2 border-b border-slate-300 bg-slate-50 p-2"
     >
       <div className="flex flex-wrap items-center gap-1">
@@ -115,13 +203,14 @@ function Toolbar({ editor }: { readonly editor: Editor }): ReactNode {
         </label>
         <select
           id="lpm-block-style"
+          data-toolbar-item=""
           value={state.heading === undefined ? 'p' : String(state.heading)}
           onChange={(event): void => {
             const value: string = event.target.value;
             if (value === 'p') {
-              chain().setParagraph().run();
+              act().setParagraph().run();
             } else {
-              chain()
+              act()
                 .setHeading({ level: Number(value) as 3 | 4 | 5 | 6 })
                 .run();
             }
@@ -137,49 +226,49 @@ function Toolbar({ editor }: { readonly editor: Editor }): ReactNode {
         <ToolbarButton
           label="Bold"
           active={state.bold}
-          onClick={(): void => void chain().toggleBold().run()}
+          onClick={(): void => void act().toggleBold().run()}
         >
           <strong>B</strong>
         </ToolbarButton>
         <ToolbarButton
           label="Italic"
           active={state.italic}
-          onClick={(): void => void chain().toggleItalic().run()}
+          onClick={(): void => void act().toggleItalic().run()}
         >
           <em>I</em>
         </ToolbarButton>
         <ToolbarButton
           label="Underline"
           active={state.underline}
-          onClick={(): void => void chain().toggleUnderline().run()}
+          onClick={(): void => void act().toggleUnderline().run()}
         >
           <u>U</u>
         </ToolbarButton>
         <ToolbarButton
           label="Highlight"
           active={state.mark}
-          onClick={(): void => void chain().toggleHighlight().run()}
+          onClick={(): void => void act().toggleHighlight().run()}
         >
           <mark>H</mark>
         </ToolbarButton>
         <ToolbarButton
           label="Inline code"
           active={state.code}
-          onClick={(): void => void chain().toggleCode().run()}
+          onClick={(): void => void act().toggleCode().run()}
         >
           {'</>'}
         </ToolbarButton>
         <ToolbarButton
           label="Subscript"
           active={state.sub}
-          onClick={(): void => void chain().toggleSubscript().run()}
+          onClick={(): void => void act().toggleSubscript().run()}
         >
           x<sub>2</sub>
         </ToolbarButton>
         <ToolbarButton
           label="Superscript"
           active={state.sup}
-          onClick={(): void => void chain().toggleSuperscript().run()}
+          onClick={(): void => void act().toggleSuperscript().run()}
         >
           x<sup>2</sup>
         </ToolbarButton>
@@ -187,34 +276,34 @@ function Toolbar({ editor }: { readonly editor: Editor }): ReactNode {
         <ToolbarButton
           label="Bulleted list"
           active={state.bullet}
-          onClick={(): void => void chain().toggleBulletList().run()}
+          onClick={(): void => void act().toggleBulletList().run()}
         >
           • List
         </ToolbarButton>
         <ToolbarButton
           label="Numbered list"
           active={state.ordered}
-          onClick={(): void => void chain().toggleOrderedList().run()}
+          onClick={(): void => void act().toggleOrderedList().run()}
         >
           1. List
         </ToolbarButton>
         <ToolbarButton
           label="Quote"
           active={state.quote}
-          onClick={(): void => void chain().toggleBlockquote().run()}
+          onClick={(): void => void act().toggleBlockquote().run()}
         >
           “ ”
         </ToolbarButton>
         <ToolbarButton
           label="Code block"
           active={state.codeBlock}
-          onClick={(): void => void chain().toggleCodeBlock().run()}
+          onClick={(): void => void act().toggleCodeBlock().run()}
         >
           {'{ }'}
         </ToolbarButton>
         <ToolbarButton
           label="Horizontal rule"
-          onClick={(): void => void chain().setHorizontalRule().run()}
+          onClick={(): void => void act().setHorizontalRule().run()}
         >
           ―
         </ToolbarButton>
@@ -244,14 +333,14 @@ function Toolbar({ editor }: { readonly editor: Editor }): ReactNode {
         <ToolbarButton
           label="Undo"
           disabled={!state.canUndo}
-          onClick={(): void => void chain().undo().run()}
+          onClick={(): void => void act().undo().run()}
         >
           Undo
         </ToolbarButton>
         <ToolbarButton
           label="Redo"
           disabled={!state.canRedo}
-          onClick={(): void => void chain().redo().run()}
+          onClick={(): void => void act().redo().run()}
         >
           Redo
         </ToolbarButton>
@@ -266,10 +355,15 @@ function Toolbar({ editor }: { readonly editor: Editor }): ReactNode {
             id="lpm-link-url"
             value={linkUrl}
             onChange={(event): void => setLinkUrl(event.target.value)}
+            autoFocus
             onKeyDown={(event): void => {
               if (event.key === 'Enter') {
                 event.preventDefault();
                 applyLink();
+              } else if (event.key === 'Escape') {
+                event.preventDefault();
+                setLinkOpen(false);
+                editor.commands.focus();
               }
             }}
             placeholder="https://example.com or mailto:name@example.com"
@@ -289,37 +383,37 @@ function Toolbar({ editor }: { readonly editor: Editor }): ReactNode {
         >
           <ToolbarButton
             label="Add row below"
-            onClick={(): void => void chain().addRowAfter().run()}
+            onClick={(): void => void act().addRowAfter().run()}
           >
             + Row
           </ToolbarButton>
           <ToolbarButton
             label="Delete row"
-            onClick={(): void => void chain().deleteRow().run()}
+            onClick={(): void => void act().deleteRow().run()}
           >
             − Row
           </ToolbarButton>
           <ToolbarButton
             label="Add column after"
-            onClick={(): void => void chain().addColumnAfter().run()}
+            onClick={(): void => void act().addColumnAfter().run()}
           >
             + Column
           </ToolbarButton>
           <ToolbarButton
             label="Delete column"
-            onClick={(): void => void chain().deleteColumn().run()}
+            onClick={(): void => void act().deleteColumn().run()}
           >
             − Column
           </ToolbarButton>
           <ToolbarButton
             label="Toggle header row"
-            onClick={(): void => void chain().toggleHeaderRow().run()}
+            onClick={(): void => void act().toggleHeaderRow().run()}
           >
             Header row
           </ToolbarButton>
           <ToolbarButton
             label="Delete table"
-            onClick={(): void => void chain().deleteTable().run()}
+            onClick={(): void => void act().deleteTable().run()}
           >
             Delete table
           </ToolbarButton>

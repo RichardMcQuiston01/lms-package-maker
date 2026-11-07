@@ -100,7 +100,7 @@ Each page opens in a visual editor ([Tiptap](https://tiptap.dev), MIT): paragrap
 
 - Uploaded images, audio and video show as real images and players while you edit; the page keeps `src="media:<id>"`. Select an image to edit its description.
 - A page that uses markup the visual editor cannot hold (`<div>`, `<span>`, `<figure>`, `<dl>`, ...) opens in the HTML view and says why. Choosing the visual view then warns that the markup would be removed, and only goes ahead if you confirm.
-- Toolbar buttons are labelled and report their state (`aria-pressed`) for screen readers. The toolbar is not yet one tab stop with arrow-key movement.
+- The toolbar follows the WAI-ARIA toolbar pattern: one Tab stop (the control used last), Left/Right/Home/End move between controls (wrapping, skipping disabled ones), Space or Enter presses and leaves focus on the button so several can be pressed in a row, and Escape returns to the text. Buttons are labelled and report their state (`aria-pressed`). Formatting with the mouse keeps the caret in the text.
 
 ### Quizzes
 
