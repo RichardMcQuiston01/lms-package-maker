@@ -1,5 +1,6 @@
 import { html5Exporter } from '@richardmcquiston01/lms-package-maker-exporter-html5';
 import { scorm12Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm12';
+import { scorm2004Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm2004';
 import { getAuthSecret, getDataDirectory, isSignUpAllowed } from './config';
 import { getPrismaClient } from './db';
 import { createErrorLog } from './errorLog';
@@ -67,7 +68,11 @@ export function getServices(): Services {
         repository: projectRepository,
         storage,
         errorLog,
-        exporters: { html5: html5Exporter, scorm12: scorm12Exporter },
+        exporters: {
+          html5: html5Exporter,
+          scorm12: scorm12Exporter,
+          scorm2004: scorm2004Exporter,
+        },
         media,
         newId,
       }),

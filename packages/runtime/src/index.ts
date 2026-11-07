@@ -7,7 +7,13 @@ export {
   type ApiWindow,
   type Scorm12Api,
 } from './scorm12.js';
-export { selectAdapter, type HostWindow } from './select.js';
+export {
+  createScorm2004Adapter,
+  findScorm2004Api,
+  formatIsoDuration,
+  type Scorm2004Api,
+} from './scorm2004.js';
+export { selectAdapter, type HostWindow, type PreferredApi } from './select.js';
 export type {
   ContentRuntime,
   InitialState,

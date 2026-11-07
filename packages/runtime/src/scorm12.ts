@@ -1,3 +1,4 @@
+import { findApi, type ApiWindow } from './apiSearch.js';
 import {
   fail,
   ok,
@@ -19,36 +20,10 @@ export interface Scorm12Api {
   LMSGetErrorString(errorCode: string): string;
 }
 
-/** The part of `window` the API search walks. */
-export interface ApiWindow {
-  API?: Scorm12Api;
-  parent?: ApiWindow | null;
-  opener?: ApiWindow | null;
-}
+export type { ApiWindow } from './apiSearch.js';
 
-const MAX_SEARCH_DEPTH = 500;
 const SUSPEND_DATA_LIMIT = 4096;
 const LOCATION_LIMIT = 255;
-
-function searchParents(start: ApiWindow): Scorm12Api | null {
-  let current: ApiWindow = start;
-  for (let depth = 0; depth < MAX_SEARCH_DEPTH; depth += 1) {
-    // Reading any property of a cross-origin or sandboxed window can throw.
-    try {
-      if (current.API !== undefined && current.API !== null) {
-        return current.API;
-      }
-      const next: ApiWindow | null | undefined = current.parent;
-      if (next === undefined || next === null || next === current) {
-        return null;
-      }
-      current = next;
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
 
 /**
  * Finds `window.API` in this window, its parents, then its opener (the order
@@ -56,17 +31,7 @@ function searchParents(start: ApiWindow): Scorm12Api | null {
  * throw on access are skipped.
  */
 export function findScorm12Api(start: ApiWindow): Scorm12Api | null {
-  const inParents: Scorm12Api | null = searchParents(start);
-  if (inParents !== null) {
-    return inParents;
-  }
-  let opener: ApiWindow | null | undefined;
-  try {
-    opener = start.opener;
-  } catch {
-    return null;
-  }
-  return opener !== undefined && opener !== null ? searchParents(opener) : null;
+  return findApi(start, (host: ApiWindow) => host.API);
 }
 
 /** Formats seconds as the `HH:MM:SS.SS` timespan SCORM 1.2 expects. */

@@ -13,6 +13,8 @@ import { playerCss } from './styles.js';
 export interface PlayerOptions {
   /** Extra files for the package, such as uploaded media. Paths start with `media/`. */
   readonly assets?: ReadonlyMap<string, Uint8Array>;
+  /** Makes the runtime try this LMS API first (see `PlayerConfig.runtimeApi`). */
+  readonly runtimeApi?: 'scorm2004';
 }
 
 const ASSET_PATH_PATTERN = /^media\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
@@ -148,6 +150,9 @@ export function buildPlayerFiles(
     ),
     completion: course.completion.kind,
     quiz: buildQuizConfig(course),
+    ...(options.runtimeApi === undefined
+      ? {}
+      : { runtimeApi: options.runtimeApi }),
   };
   const html = `<!doctype html>
 <html lang="${escapeHtml(course.language)}">

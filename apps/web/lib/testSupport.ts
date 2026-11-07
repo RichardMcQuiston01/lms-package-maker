@@ -1,6 +1,7 @@
 import { test } from 'bun:test';
 import { html5Exporter } from '@richardmcquiston01/lms-package-maker-exporter-html5';
 import { scorm12Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm12';
+import { scorm2004Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm2004';
 import type {
   ErrorLogAdapter,
   ErrorLogEntry,
@@ -68,7 +69,11 @@ export function createTestServices(
     repository,
     storage,
     errorLog,
-    exporters: { html5: html5Exporter, scorm12: scorm12Exporter },
+    exporters: {
+      html5: html5Exporter,
+      scorm12: scorm12Exporter,
+      scorm2004: scorm2004Exporter,
+    },
     media,
     newId,
   });

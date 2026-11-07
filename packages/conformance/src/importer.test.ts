@@ -1,6 +1,7 @@
 import { describe, expect } from 'bun:test';
 import { html5Exporter } from '@richardmcquiston01/lms-package-maker-exporter-html5';
 import { scorm12Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm12';
+import { scorm2004Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm2004';
 import {
   zipPackage,
   type Exporter,
@@ -40,6 +41,38 @@ describe('reactive-lms import', () => {
       expect(parsed.title).toBe('Conformance Course');
       expect(parsed.entryHref).toBe('index.html');
       expect(parsed.activities[0]?.metadata?.['scormType']).toBe('sco');
+    }
+  );
+
+  testIf(reactiveLms !== null)(
+    'detects and parses the SCORM 2004 package',
+    () => {
+      const lms = reactiveLms as ReactiveLms;
+      const index: PackageFileIndex = zipIndex(scorm2004Exporter, lms);
+      expect(lms.detectPackageType(index)).toBe('scorm_2004');
+      const parsed = lms.parseImsmanifest(index);
+      expect(parsed.packageType).toBe('scorm_2004');
+      expect(parsed.title).toBe('Conformance Course');
+      expect(parsed.entryHref).toBe('index.html');
+      expect(parsed.activities[0]?.metadata?.['scormType']).toBe('sco');
+    }
+  );
+
+  testIf(reactiveLms !== null)(
+    'every file the SCORM 2004 manifest lists is in the zip',
+    () => {
+      const lms = reactiveLms as ReactiveLms;
+      const index: PackageFileIndex = zipIndex(scorm2004Exporter, lms);
+      const manifest: string = new TextDecoder().decode(
+        index.read('imsmanifest.xml')
+      );
+      const listed: string[] = [
+        ...manifest.matchAll(/<file href="([^"]+)"/g),
+      ].map((match: RegExpMatchArray): string => match[1] ?? '');
+      expect(listed.length).toBeGreaterThan(0);
+      for (const file of listed) {
+        expect(index.has(file)).toBe(true);
+      }
     }
   );
 
