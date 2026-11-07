@@ -20,6 +20,12 @@ export interface PlayerOptions {
    * launch URL and uses this IRI as the course Activity id.
    */
   readonly xapiActivityId?: string;
+  /**
+   * Makes this a cmi5 AU: the runtime follows the cmi5 launch, and the page
+   * gets an "Exit course" button that ends the session and returns the learner
+   * to the LMS.
+   */
+  readonly cmi5?: boolean;
 }
 
 const ASSET_PATH_PATTERN = /^media\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
@@ -158,6 +164,9 @@ export function buildPlayerFiles(
     ...(options.runtimeApi === undefined
       ? {}
       : { runtimeApi: options.runtimeApi }),
+    ...(options.cmi5 === true
+      ? { runtimeApi: 'cmi5' as const, language: course.language }
+      : {}),
     ...(options.xapiActivityId === undefined
       ? {}
       : {
@@ -166,6 +175,10 @@ export function buildPlayerFiles(
           language: course.language,
         }),
   };
+  const exitButton: string =
+    options.cmi5 === true
+      ? '\n<button type="button" data-action="exit">Exit course</button>'
+      : '';
   const html = `<!doctype html>
 <html lang="${escapeHtml(course.language)}">
 <head>
@@ -187,7 +200,7 @@ ${renderNav(course)}
 ${renderPages(course)}
 <div class="lpm-controls">
 <button type="button" data-action="prev">Previous</button>
-<button type="button" data-action="next">Next</button>
+<button type="button" data-action="next">Next</button>${exitButton}
 </div>
 </div>
 <script type="application/json" id="lpm-config">${jsonForScript(config)}</script>

@@ -75,6 +75,15 @@ export function createRuntime(
     return result;
   }
 
+  function terminateNow(): Result<null> {
+    const active: Result<null> = requireActive('terminate');
+    if (!active.ok) {
+      return active;
+    }
+    terminated = true;
+    return adapter.terminate(Math.max(0, (now() - startedAt) / 1000));
+  }
+
   function begin(result: Result<InitialState>): Result<InitialState> {
     if (!result.ok) {
       return result;
@@ -150,14 +159,16 @@ export function createRuntime(
     complete: (): Result<null> => applyStatus('completed'),
     pass: (): Result<null> => applyStatus('passed'),
     fail: (): Result<null> => applyStatus('failed'),
-    terminate(): Result<null> {
-      const active: Result<null> = requireActive('terminate');
-      if (!active.ok) {
-        return active;
+    async exit(): Promise<Result<null>> {
+      if (!terminated) {
+        const ended: Result<null> = terminateNow();
+        if (!ended.ok) {
+          return ended;
+        }
       }
-      terminated = true;
-      return adapter.terminate(Math.max(0, (now() - startedAt) / 1000));
+      return adapter.finish === undefined ? ok() : adapter.finish();
     },
+    terminate: terminateNow,
   };
 }
 

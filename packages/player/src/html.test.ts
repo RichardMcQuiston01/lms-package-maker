@@ -43,6 +43,23 @@ describe('buildPlayerFiles', () => {
     }
   });
 
+  test('only a cmi5 player gets an Exit button and a cmi5 runtime hint', () => {
+    const text = (options: Parameters<typeof buildPlayerFiles>[1]): string => {
+      const result = buildPlayerFiles(sampleCourse, options);
+      if (!result.ok) {
+        throw new Error(result.errors.join('; '));
+      }
+      return new TextDecoder().decode(result.value.get('index.html'));
+    };
+    const plain: string = text({});
+    expect(plain).not.toContain('data-action="exit"');
+    expect(plain).not.toContain('runtimeApi');
+    const cmi5: string = text({ cmi5: true });
+    expect(cmi5).toContain('data-action="exit"');
+    expect(cmi5).toContain('"runtimeApi":"cmi5"');
+    expect(cmi5).toContain('"language":"en"');
+  });
+
   test('keeps page ids from closing the config script block', () => {
     const result = buildPlayerFiles({
       ...sampleCourse,

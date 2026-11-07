@@ -2,6 +2,7 @@ import { describe, expect } from 'bun:test';
 import { html5Exporter } from '@richardmcquiston01/lms-package-maker-exporter-html5';
 import { scorm12Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm12';
 import { scorm2004Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm2004';
+import { cmi5Exporter } from '@richardmcquiston01/lms-package-maker-exporter-cmi5';
 import { xapiExporter } from '@richardmcquiston01/lms-package-maker-exporter-xapi';
 import {
   zipPackage,
@@ -85,6 +86,17 @@ describe('reactive-lms import', () => {
       expect(index.has('tincan.xml')).toBe(true);
       expect(index.has('index.html')).toBe(true);
       expect(lms.detectPackageType(index)).toBe('xapi');
+    }
+  );
+
+  testIf(reactiveLms !== null)(
+    'detects the cmi5 package from its cmi5.xml, ahead of HTML5',
+    () => {
+      const lms = reactiveLms as ReactiveLms;
+      const index: PackageFileIndex = zipIndex(cmi5Exporter, lms);
+      expect(index.has('cmi5.xml')).toBe(true);
+      expect(index.has('index.html')).toBe(true);
+      expect(lms.detectPackageType(index)).toBe('cmi5');
     }
   );
 

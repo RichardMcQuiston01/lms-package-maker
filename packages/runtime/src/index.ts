@@ -14,6 +14,14 @@ export {
   type Scorm2004Api,
 } from './scorm2004.js';
 export {
+  createCmi5Adapter,
+  parseCmi5Launch,
+  parseLaunchData,
+  type Cmi5Content,
+  type Cmi5Launch,
+  type Cmi5Redirect,
+} from './cmi5.js';
+export {
   createUnavailableAdapter,
   createXapiAdapter,
   newUuid,
@@ -25,6 +33,7 @@ export {
 export {
   selectAdapter,
   type HostWindow,
+  type Cmi5Setup,
   type PreferredApi,
   type XapiSetup,
 } from './select.js';

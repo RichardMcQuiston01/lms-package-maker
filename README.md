@@ -48,13 +48,14 @@ Each package under `packages/` is built to be published on its own (ESM, typed, 
 | `exporter-html5` | Plain HTML5 package |
 | `exporter-scorm12` | SCORM 1.2 package, with the SCORM 1.2 schema files (see `schemas/NOTICE.md` for origin and license) |
 | `exporter-xapi` | xAPI (TinCan) package with `tincan.xml` |
+| `exporter-cmi5` | cmi5 package with `cmi5.xml` (checked against the cmi5 course structure schema; see `schemas/NOTICE.md`) |
 | `exporter-scorm2004` | SCORM 2004 4th Edition package, with the content packaging, ADL and simple sequencing schema files (see `schemas/NOTICE.md`) |
 
 The browser scripts are bundled from source into `*.generated.ts` files (`bun run build:bundles`); a test fails if they are stale.
 
 ### Conformance tests
 
-`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper. reactive-lms reads SCORM 2004 manifests but has no `API_1484_11` yet, so the SCORM 2004 runtime is checked in Chromium against a strict stand-in host (`packages/conformance/src/scorm2004Host.ts`) that enforces the SCORM 2004 call order, value ranges and `session_time` format. reactive-lms detects `tincan.xml` packages but has no LRS, so the xAPI runtime is checked against a stand-in LRS (`packages/conformance/src/standInLrs.ts`), a real local HTTP server that checks the version header, authorization, statement shape, State API parameters and the CORS preflight.
+`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper. reactive-lms reads SCORM 2004 manifests but has no `API_1484_11` yet, so the SCORM 2004 runtime is checked in Chromium against a strict stand-in host (`packages/conformance/src/scorm2004Host.ts`) that enforces the SCORM 2004 call order, value ranges and `session_time` format. reactive-lms detects `tincan.xml` packages but has no LRS, so the xAPI runtime is checked against a stand-in LRS (`packages/conformance/src/standInLrs.ts`), a real local HTTP server that checks the version header, authorization, statement shape, State API parameters and the CORS preflight. The cmi5 runtime is checked against a stand-in cmi5 LMS (`packages/conformance/src/standInCmi5Lms.ts`) that adds the one-time `fetch` address, `LMS.LaunchData`, and the cmi5 verb, ordering, result, duration, category and launch-mode rules.
 
 ```bash
 bun run conformance:fetch   # clone the pinned commit into .cache/ and install it
@@ -90,7 +91,7 @@ bun run typecheck   # packages and web app
 cd apps/web && bunx prisma migrate dev && bun run dev
 ```
 
-Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2, SCORM 2004, xAPI or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
+Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2, SCORM 2004, xAPI, cmi5 or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
 
 The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one.
 
@@ -133,6 +134,18 @@ The xAPI (TinCan) export is a `tincan.xml` plus the player. Import it into an LR
 - The LRS must allow cross-origin requests from where the package is hosted (CORS) with the `Authorization`, `Content-Type` and `X-Experience-API-Version` headers.
 - Opened without launch parameters (a preview, or from disk) the package runs on its own and sends nothing. A broken launch (an `endpoint` without an `actor`, or an LRS that refuses the request) is shown at the top of the page; the course still works.
 - Not included: statements per page or per question, cmi5 (a separate export), and the TinCan XML schema (`tincan.xsd`), whose origin and license I could not confirm, so `tincan.xml` is checked for well-formedness only.
+
+### cmi5
+
+The cmi5 export is a `cmi5.xml` (one course with one assignable unit, AU) plus the player. A cmi5 LMS launches the AU with `endpoint`, `fetch`, `actor`, `registration` and `activityId`; the package then POSTs to the one-time `fetch` address for its token, reads `LMS.LaunchData` and the learner preferences, and sends statements built from the LMS's context template. A course that finishes by viewing every page is `moveOn="Completed"`; one that finishes by passing the quiz is `moveOn="Passed"` with the pass mark as `masteryScore`.
+
+cmi5 is stricter than SCORM or plain xAPI, so it differs from the other exports in what it can report:
+
+- `initialized` first and `terminated` last, with durations; `completed`, `passed` and `failed` carry the moveOn category, and `passed`/`failed` the mastery score. A `passed` or `completed` is sent once per registration, and a `failed` never follows a `passed`.
+- **Only one of `passed` or `failed` per session.** Every quiz attempt is still on record, as a `scored` statement with its score, but the cmi5 result is `passed` the first time the learner passes (sent at once), otherwise `failed` for the most recent attempt when the session ends. If the window is closed without the page ending cleanly, a pending `failed` is not sent.
+- In `Browse` and `Review` launch modes only `initialized` and `terminated` are sent. An "Exit course" button ends the session and goes to the LMS's `returnURL` when it gave one; closing the window ends the session too.
+- If the score and the `masteryScore` the LMS gave disagree, the LMS's mastery score decides between `passed` and `failed`.
+- Not included: the learner's language and audio preferences are read but not used, there are no statements per page or question, and a course is one AU (no blocks or objectives).
 
 ### Media
 

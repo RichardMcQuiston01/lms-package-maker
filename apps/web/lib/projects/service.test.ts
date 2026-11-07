@@ -153,6 +153,29 @@ describe('project service', () => {
     ]);
   });
 
+  test('exports a cmi5 zip with cmi5.xml and records it', async () => {
+    const { service, repository } = createTestServices();
+    const created = await service.create(OWNER, { title: 'Safety 101' });
+    if (!created.ok) throw new Error('create failed');
+    const exported = await service.exportProject(
+      created.value.id,
+      OWNER,
+      'cmi5'
+    );
+    expect(exported.ok).toBe(true);
+    if (exported.ok) {
+      expect(exported.value.fileName).toBe('safety-101-cmi5.zip');
+      const names: string[] = Object.keys(unzipSync(exported.value.bytes));
+      expect(names).toContain('cmi5.xml');
+      expect(names).not.toContain('imsmanifest.xml');
+      expect(names).not.toContain('tincan.xml');
+    }
+    const kept = await repository.listExports(created.value.id);
+    expect(kept.ok && kept.value.map((entry) => entry.standard)).toEqual([
+      'cmi5',
+    ]);
+  });
+
   test('hides projects from everyone but their owner', async () => {
     const { service } = createTestServices();
     const created = await service.create(OWNER, { title: 'Private' });

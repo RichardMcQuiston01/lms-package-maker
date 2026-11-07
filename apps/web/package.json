@@ -14,6 +14,7 @@
   "dependencies": {
     "@prisma/client": "^6",
     "@richardmcquiston01/error-log-adapter": "^0.15.1",
+    "@richardmcquiston01/lms-package-maker-exporter-cmi5": "workspace:*",
     "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
     "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
     "@richardmcquiston01/lms-package-maker-exporter-scorm2004": "workspace:*",

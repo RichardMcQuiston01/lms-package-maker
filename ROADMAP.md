@@ -33,7 +33,7 @@ HTML5 and SCORM 1.2 import today.
 - [x] SCORM 2004 4th Edition export (single SCO, pass mark, no sequencing rules yet)
 - [ ] SCORM 2004 sequencing and navigation
 - [x] xAPI (TinCan) export: statements and State API progress
-- [ ] cmi5
+- [x] cmi5 export (one AU; launch, token fetch, launch data, statement rules)
 
 ## M4 – Distribution and extras
 

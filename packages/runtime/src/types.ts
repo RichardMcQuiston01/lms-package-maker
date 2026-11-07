@@ -34,6 +34,11 @@ export interface RuntimeAdapter {
   setScore(score: Score): Result<null>;
   setStatus(status: LessonStatus): Result<null>;
   terminate(sessionSeconds: number): Result<null>;
+  /**
+   * Set by adapters that have more to do once the attempt has ended (cmi5
+   * waits for its last statements to be sent, then redirects the learner).
+   */
+  finish?(): Promise<Result<null>>;
 }
 
 /** The single API course content uses; it never calls a standard directly. */
@@ -55,6 +60,11 @@ export interface ContentRuntime {
   pass(): Result<null>;
   fail(): Result<null>;
   terminate(): Result<null>;
+  /**
+   * Ends the attempt on purpose (an "Exit" button): terminates if that has
+   * not happened yet, then lets the adapter finish (cmi5 redirects the learner).
+   */
+  exit(): Promise<Result<null>>;
 }
 
 export function ok(): Result<null> {

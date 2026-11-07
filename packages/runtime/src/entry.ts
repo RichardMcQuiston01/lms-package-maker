@@ -3,6 +3,7 @@ import {
   selectAdapter,
   type HostWindow,
   type PreferredApi,
+  type Cmi5Setup,
   type XapiSetup,
 } from './select.js';
 import type { ContentRuntime } from './types.js';
@@ -16,6 +17,7 @@ declare global {
 interface BuiltFor {
   readonly preferred: PreferredApi;
   readonly xapi?: XapiSetup;
+  readonly cmi5?: Cmi5Setup;
 }
 
 /**
@@ -34,6 +36,19 @@ function readBuiltFor(): BuiltFor {
         language?: unknown;
         xapi?: { activityId?: unknown };
       } = JSON.parse(text);
+      if (config.runtimeApi === 'cmi5') {
+        return {
+          preferred: 'cmi5',
+          cmi5: {
+            search: window.location.search,
+            content: {
+              name: typeof config.title === 'string' ? config.title : '',
+              language:
+                typeof config.language === 'string' ? config.language : 'en',
+            },
+          },
+        };
+      }
       if (config.runtimeApi === 'scorm2004') {
         return { preferred: 'scorm2004' };
       }
@@ -68,6 +83,7 @@ window.LmsPackageRuntime = createRuntime(
   selectAdapter(
     window as unknown as HostWindow,
     builtFor.preferred,
-    builtFor.xapi
+    builtFor.xapi,
+    builtFor.cmi5
   )
 );

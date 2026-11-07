@@ -27,8 +27,106 @@ export interface StoredStatement {
   readonly statement: Record<string, any>;
 }
 
-function isObject(value: unknown): value is Record<string, any> {
+export function isObject(value: unknown): value is Record<string, any> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** The checks of xAPI 1.0.3 section 2 that apply to what we send. */
+export function xapiStatementProblems(
+  statement: unknown,
+  usedIds: ReadonlySet<string>
+): string[] {
+  if (!isObject(statement)) {
+    return ['a statement must be a JSON object'];
+  }
+  const problems: string[] = [];
+  if (typeof statement['id'] !== 'string' || !UUID.test(statement['id'])) {
+    problems.push('id must be a UUID');
+  } else if (usedIds.has(statement['id'])) {
+    problems.push('id was already used');
+  }
+  const actor = statement['actor'];
+  if (!isObject(actor)) {
+    problems.push('actor is required');
+  } else if (IFI_KEYS.filter((key) => key in actor).length !== 1) {
+    problems.push('actor needs exactly one inverse functional identifier');
+  }
+  const verb = statement['verb'];
+  if (
+    !isObject(verb) ||
+    typeof verb['id'] !== 'string' ||
+    !IRI.test(verb['id'])
+  ) {
+    problems.push('verb.id must be an IRI');
+  }
+  const object = statement['object'];
+  if (
+    !isObject(object) ||
+    typeof object['id'] !== 'string' ||
+    !IRI.test(object['id'])
+  ) {
+    problems.push('object.id must be an IRI');
+  } else if (
+    object['objectType'] !== undefined &&
+    object['objectType'] !== 'Activity'
+  ) {
+    problems.push('object.objectType must be Activity');
+  }
+  if (
+    statement['timestamp'] !== undefined &&
+    (typeof statement['timestamp'] !== 'string' ||
+      !TIMESTAMP.test(statement['timestamp']))
+  ) {
+    problems.push('timestamp must be ISO 8601 with a time zone');
+  }
+  const context = statement['context'];
+  if (isObject(context) && context['registration'] !== undefined) {
+    if (
+      typeof context['registration'] !== 'string' ||
+      !UUID.test(context['registration'])
+    ) {
+      problems.push('context.registration must be a UUID');
+    }
+  }
+  const result = statement['result'];
+  if (result !== undefined) {
+    if (!isObject(result)) {
+      problems.push('result must be an object');
+    } else {
+      if (
+        result['duration'] !== undefined &&
+        !DURATION.test(String(result['duration']))
+      ) {
+        problems.push('result.duration must be an ISO 8601 duration');
+      }
+      const score = result['score'];
+      if (score !== undefined) {
+        if (!isObject(score)) {
+          problems.push('result.score must be an object');
+        } else {
+          if (
+            score['scaled'] !== undefined &&
+            !(
+              typeof score['scaled'] === 'number' &&
+              score['scaled'] >= -1 &&
+              score['scaled'] <= 1
+            )
+          ) {
+            problems.push('result.score.scaled must be a number from -1 to 1');
+          }
+          if (
+            typeof score['min'] === 'number' &&
+            typeof score['max'] === 'number' &&
+            typeof score['raw'] === 'number' &&
+            !(score['min'] <= score['raw'] && score['raw'] <= score['max'])
+          ) {
+            problems.push('result.score.raw must lie between min and max');
+          }
+        }
+      }
+    }
+  }
+  return problems;
 }
 
 export class StandInLrs {
@@ -160,7 +258,12 @@ export class StandInLrs {
     const batch: unknown[] = Array.isArray(body) ? body : [body];
     const problems: string[] = [];
     for (const statement of batch) {
-      problems.push(...this.check(statement));
+      problems.push(
+        ...xapiStatementProblems(
+          statement,
+          new Set(this.statements.map((entry) => entry.id))
+        )
+      );
     }
     if (problems.length > 0) {
       return this.refuse(request, 400, problems.join('; '));
@@ -178,103 +281,6 @@ export class StandInLrs {
       JSON.stringify((batch as Record<string, any>[]).map((s) => s['id'])),
       { 'Content-Type': 'application/json' }
     );
-  }
-
-  /** The checks of xAPI 1.0.3 section 2 that apply to what we send. */
-  private check(statement: unknown): string[] {
-    if (!isObject(statement)) {
-      return ['a statement must be a JSON object'];
-    }
-    const problems: string[] = [];
-    if (typeof statement['id'] !== 'string' || !UUID.test(statement['id'])) {
-      problems.push('id must be a UUID');
-    } else if (this.statements.some((entry) => entry.id === statement['id'])) {
-      problems.push('id was already used');
-    }
-    const actor = statement['actor'];
-    if (!isObject(actor)) {
-      problems.push('actor is required');
-    } else if (IFI_KEYS.filter((key) => key in actor).length !== 1) {
-      problems.push('actor needs exactly one inverse functional identifier');
-    }
-    const verb = statement['verb'];
-    if (
-      !isObject(verb) ||
-      typeof verb['id'] !== 'string' ||
-      !IRI.test(verb['id'])
-    ) {
-      problems.push('verb.id must be an IRI');
-    }
-    const object = statement['object'];
-    if (
-      !isObject(object) ||
-      typeof object['id'] !== 'string' ||
-      !IRI.test(object['id'])
-    ) {
-      problems.push('object.id must be an IRI');
-    } else if (
-      object['objectType'] !== undefined &&
-      object['objectType'] !== 'Activity'
-    ) {
-      problems.push('object.objectType must be Activity');
-    }
-    if (
-      statement['timestamp'] !== undefined &&
-      (typeof statement['timestamp'] !== 'string' ||
-        !TIMESTAMP.test(statement['timestamp']))
-    ) {
-      problems.push('timestamp must be ISO 8601 with a time zone');
-    }
-    const context = statement['context'];
-    if (isObject(context) && context['registration'] !== undefined) {
-      if (
-        typeof context['registration'] !== 'string' ||
-        !UUID.test(context['registration'])
-      ) {
-        problems.push('context.registration must be a UUID');
-      }
-    }
-    const result = statement['result'];
-    if (result !== undefined) {
-      if (!isObject(result)) {
-        problems.push('result must be an object');
-      } else {
-        if (
-          result['duration'] !== undefined &&
-          !DURATION.test(String(result['duration']))
-        ) {
-          problems.push('result.duration must be an ISO 8601 duration');
-        }
-        const score = result['score'];
-        if (score !== undefined) {
-          if (!isObject(score)) {
-            problems.push('result.score must be an object');
-          } else {
-            if (
-              score['scaled'] !== undefined &&
-              !(
-                typeof score['scaled'] === 'number' &&
-                score['scaled'] >= -1 &&
-                score['scaled'] <= 1
-              )
-            ) {
-              problems.push(
-                'result.score.scaled must be a number from -1 to 1'
-              );
-            }
-            if (
-              typeof score['min'] === 'number' &&
-              typeof score['max'] === 'number' &&
-              typeof score['raw'] === 'number' &&
-              !(score['min'] <= score['raw'] && score['raw'] <= score['max'])
-            ) {
-              problems.push('result.score.raw must lie between min and max');
-            }
-          }
-        }
-      }
-    }
-    return problems;
   }
 
   private async state(request: Request, url: URL): Promise<Response> {
