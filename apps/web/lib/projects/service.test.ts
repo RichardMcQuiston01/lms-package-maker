@@ -176,6 +176,30 @@ describe('project service', () => {
     ]);
   });
 
+  test('exports an AICC zip with the four course files and records it', async () => {
+    const { service, repository } = createTestServices();
+    const created = await service.create(OWNER, { title: 'Safety 101' });
+    if (!created.ok) throw new Error('create failed');
+    const exported = await service.exportProject(
+      created.value.id,
+      OWNER,
+      'aicc'
+    );
+    expect(exported.ok).toBe(true);
+    if (exported.ok) {
+      expect(exported.value.fileName).toBe('safety-101-aicc.zip');
+      const names: string[] = Object.keys(unzipSync(exported.value.bytes));
+      for (const extension of ['crs', 'au', 'des', 'cst']) {
+        expect(names).toContain(`course.${extension}`);
+      }
+      expect(names).not.toContain('imsmanifest.xml');
+    }
+    const kept = await repository.listExports(created.value.id);
+    expect(kept.ok && kept.value.map((entry) => entry.standard)).toEqual([
+      'aicc',
+    ]);
+  });
+
   test('hides projects from everyone but their owner', async () => {
     const { service } = createTestServices();
     const created = await service.create(OWNER, { title: 'Private' });

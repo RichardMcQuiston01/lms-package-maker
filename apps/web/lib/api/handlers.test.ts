@@ -117,10 +117,10 @@ describe('API handlers', () => {
     );
     const files = unzipSync(new Uint8Array(await response.arrayBuffer()));
     expect(Object.keys(files)).toContain('imsmanifest.xml');
-    const bad = await exportProject(ctx.service, OWNER, id, 'aicc');
+    const bad = await exportProject(ctx.service, OWNER, id, 'lti');
     expect(bad.status).toBe(400);
     expect(((await bad.json()) as { error: string }).error).toContain(
-      'html5, scorm12, scorm2004, xapi, cmi5'
+      'html5, scorm12, scorm2004, xapi, cmi5, aicc'
     );
   });
 });

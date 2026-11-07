@@ -26,7 +26,7 @@ export type { ServiceResult } from '../serviceResult';
 /** Standards the app can export today. */
 export type SupportedStandard = Extract<
   ExportStandard,
-  'html5' | 'scorm12' | 'scorm2004' | 'xapi' | 'cmi5'
+  'html5' | 'scorm12' | 'scorm2004' | 'xapi' | 'cmi5' | 'aicc'
 >;
 
 export const SUPPORTED_STANDARDS: readonly SupportedStandard[] = [
@@ -35,6 +35,7 @@ export const SUPPORTED_STANDARDS: readonly SupportedStandard[] = [
   'scorm2004',
   'xapi',
   'cmi5',
+  'aicc',
 ];
 
 export function isSupportedStandard(value: string): value is SupportedStandard {

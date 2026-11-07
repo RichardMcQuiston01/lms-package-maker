@@ -16,6 +16,7 @@
       "dependencies": {
         "@prisma/client": "^6",
         "@richardmcquiston01/error-log-adapter": "^0.15.1",
+        "@richardmcquiston01/lms-package-maker-exporter-aicc": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-cmi5": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
@@ -55,6 +56,7 @@
       "name": "@richardmcquiston01/lms-package-maker-conformance",
       "version": "0.0.0",
       "dependencies": {
+        "@richardmcquiston01/lms-package-maker-exporter-aicc": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-cmi5": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
@@ -73,6 +75,18 @@
       "devDependencies": {
         "fflate": "^0.8.3",
         "playwright-core": "1.63.0",
+      },
+    },
+    "packages/exporter-aicc": {
+      "name": "@richardmcquiston01/lms-package-maker-exporter-aicc",
+      "version": "0.1.0",
+      "dependencies": {
+        "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-model": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-player": "workspace:*",
+      },
+      "devDependencies": {
+        "fflate": "^0.8.2",
       },
     },
     "packages/exporter-cmi5": {
@@ -277,6 +291,8 @@
     "@richardmcquiston01/lms-package-maker-conformance": ["@richardmcquiston01/lms-package-maker-conformance@workspace:packages/conformance"],
 
     "@richardmcquiston01/lms-package-maker-e2e": ["@richardmcquiston01/lms-package-maker-e2e@workspace:packages/e2e"],
+
+    "@richardmcquiston01/lms-package-maker-exporter-aicc": ["@richardmcquiston01/lms-package-maker-exporter-aicc@workspace:packages/exporter-aicc"],
 
     "@richardmcquiston01/lms-package-maker-exporter-cmi5": ["@richardmcquiston01/lms-package-maker-exporter-cmi5@workspace:packages/exporter-cmi5"],
 
