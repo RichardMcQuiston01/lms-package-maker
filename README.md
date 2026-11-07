@@ -42,18 +42,19 @@ Each package under `packages/` is built to be published on its own (ESM, typed, 
 | --- | --- |
 | `identity` | The `IdentityProvider` contract, plus `header` and `single-user` providers |
 | `model` | Course Model types and validation |
-| `runtime` | Browser runtime: SCORM 1.2 API, SCORM 2004 API or `postMessage` to the host |
+| `runtime` | Browser runtime: SCORM 1.2 API, SCORM 2004 API, xAPI (LRS) or `postMessage` to the host |
 | `player` | Static course player generated from a Course Model |
 | `exporters` | `Exporter` interface and deterministic zip |
 | `exporter-html5` | Plain HTML5 package |
 | `exporter-scorm12` | SCORM 1.2 package, with the SCORM 1.2 schema files (see `schemas/NOTICE.md` for origin and license) |
+| `exporter-xapi` | xAPI (TinCan) package with `tincan.xml` |
 | `exporter-scorm2004` | SCORM 2004 4th Edition package, with the content packaging, ADL and simple sequencing schema files (see `schemas/NOTICE.md`) |
 
 The browser scripts are bundled from source into `*.generated.ts` files (`bun run build:bundles`); a test fails if they are stale.
 
 ### Conformance tests
 
-`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper. reactive-lms reads SCORM 2004 manifests but has no `API_1484_11` yet, so the SCORM 2004 runtime is checked in Chromium against a strict stand-in host (`packages/conformance/src/scorm2004Host.ts`) that enforces the SCORM 2004 call order, value ranges and `session_time` format.
+`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper. reactive-lms reads SCORM 2004 manifests but has no `API_1484_11` yet, so the SCORM 2004 runtime is checked in Chromium against a strict stand-in host (`packages/conformance/src/scorm2004Host.ts`) that enforces the SCORM 2004 call order, value ranges and `session_time` format. reactive-lms detects `tincan.xml` packages but has no LRS, so the xAPI runtime is checked against a stand-in LRS (`packages/conformance/src/standInLrs.ts`), a real local HTTP server that checks the version header, authorization, statement shape, State API parameters and the CORS preflight.
 
 ```bash
 bun run conformance:fetch   # clone the pinned commit into .cache/ and install it
@@ -89,7 +90,7 @@ bun run typecheck   # packages and web app
 cd apps/web && bunx prisma migrate dev && bun run dev
 ```
 
-Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2, SCORM 2004 or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
+Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2, SCORM 2004, xAPI or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
 
 The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one.
 
@@ -114,6 +115,16 @@ The SCORM 2004 (4th Edition) export has the same single-SCO shape as SCORM 1.2: 
 - **No sequencing or navigation rules are used.** Pages are navigated inside the player.
 
 If an LMS offers both `API` and `API_1484_11`, each package uses the one it was built for.
+
+### xAPI
+
+The xAPI (TinCan) export is a `tincan.xml` plus the player. Import it into an LRS or LMS that launches TinCan packages. The LRS opens `index.html` with the standard launch parameters (`endpoint`, `auth`, `actor`, `registration`) and the package talks to it directly from the browser:
+
+- Statements: `initialized`, `scored` (when a quiz is marked), `completed`, `passed`, `failed` (each with `result.score` when there is one) and `terminated` (with `result.duration`). The course Activity id is `urn:lms-package-maker:course:<course id>`, the same on every export. As with SCORM, every quiz attempt is reported as it happened.
+- Saved progress (page, answers, status) lives in the LRS State API under the state id `lms-package-maker.state`, so a learner resumes.
+- The LRS must allow cross-origin requests from where the package is hosted (CORS) with the `Authorization`, `Content-Type` and `X-Experience-API-Version` headers.
+- Opened without launch parameters (a preview, or from disk) the package runs on its own and sends nothing. A broken launch (an `endpoint` without an `actor`, or an LRS that refuses the request) is shown at the top of the page; the course still works.
+- Not included: statements per page or per question, cmi5 (a separate export), and the TinCan XML schema (`tincan.xsd`), whose origin and license I could not confirm, so `tincan.xml` is checked for well-formedness only.
 
 ### Media
 

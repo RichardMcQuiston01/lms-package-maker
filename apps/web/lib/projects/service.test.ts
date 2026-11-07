@@ -131,6 +131,28 @@ describe('project service', () => {
     ]);
   });
 
+  test('exports an xAPI zip with tincan.xml and records it', async () => {
+    const { service, repository } = createTestServices();
+    const created = await service.create(OWNER, { title: 'Safety 101' });
+    if (!created.ok) throw new Error('create failed');
+    const exported = await service.exportProject(
+      created.value.id,
+      OWNER,
+      'xapi'
+    );
+    expect(exported.ok).toBe(true);
+    if (exported.ok) {
+      expect(exported.value.fileName).toBe('safety-101-xapi.zip');
+      const names: string[] = Object.keys(unzipSync(exported.value.bytes));
+      expect(names).toContain('tincan.xml');
+      expect(names).not.toContain('imsmanifest.xml');
+    }
+    const kept = await repository.listExports(created.value.id);
+    expect(kept.ok && kept.value.map((entry) => entry.standard)).toEqual([
+      'xapi',
+    ]);
+  });
+
   test('hides projects from everyone but their owner', async () => {
     const { service } = createTestServices();
     const created = await service.create(OWNER, { title: 'Private' });

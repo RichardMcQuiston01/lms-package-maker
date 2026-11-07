@@ -34,7 +34,7 @@ export default async function HomePage(): Promise<ReactNode> {
         </span>
       </div>
       <p className="mt-2 text-slate-600">
-        Author once, export to SCORM 1.2, SCORM 2004 or HTML5.
+        Author once, export to SCORM 1.2, SCORM 2004, xAPI or HTML5.
       </p>
       <section className="mt-8" aria-labelledby="new-course">
         <h2 id="new-course" className="mb-3 text-lg font-medium">

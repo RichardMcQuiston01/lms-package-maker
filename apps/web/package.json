@@ -17,6 +17,7 @@
     "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
     "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
     "@richardmcquiston01/lms-package-maker-exporter-scorm2004": "workspace:*",
+    "@richardmcquiston01/lms-package-maker-exporter-xapi": "workspace:*",
     "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
     "@richardmcquiston01/lms-package-maker-identity": "workspace:*",
     "@richardmcquiston01/lms-package-maker-model": "workspace:*",

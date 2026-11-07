@@ -1,0 +1,41 @@
+{
+  "name": "@richardmcquiston01/lms-package-maker-exporter-xapi",
+  "version": "0.1.0",
+  "description": "Exports a Course Model as an xAPI (TinCan) package",
+  "private": true,
+  "license": "Apache-2.0",
+  "author": "Richard McQuiston",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RichardMcQuiston01/lms-package-maker.git",
+    "directory": "packages/exporter-xapi"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@richardmcquiston01/lms-package-maker-model": "workspace:*",
+    "@richardmcquiston01/lms-package-maker-player": "workspace:*",
+    "@richardmcquiston01/lms-package-maker-exporters": "workspace:*"
+  },
+  "devDependencies": {
+    "fflate": "^0.8.2",
+    "xmllint-wasm": "^5.3.0"
+  }
+}

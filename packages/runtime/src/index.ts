@@ -13,7 +13,21 @@ export {
   formatIsoDuration,
   type Scorm2004Api,
 } from './scorm2004.js';
-export { selectAdapter, type HostWindow, type PreferredApi } from './select.js';
+export {
+  createUnavailableAdapter,
+  createXapiAdapter,
+  newUuid,
+  parseXapiLaunch,
+  type XapiContent,
+  type XapiEnvironment,
+  type XapiLaunch,
+} from './xapi.js';
+export {
+  selectAdapter,
+  type HostWindow,
+  type PreferredApi,
+  type XapiSetup,
+} from './select.js';
 export type {
   ContentRuntime,
   InitialState,

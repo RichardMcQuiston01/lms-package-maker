@@ -1,5 +1,10 @@
 import { createRuntime } from './core.js';
-import { selectAdapter, type HostWindow, type PreferredApi } from './select.js';
+import {
+  selectAdapter,
+  type HostWindow,
+  type PreferredApi,
+  type XapiSetup,
+} from './select.js';
 import type { ContentRuntime } from './types.js';
 
 declare global {
@@ -8,27 +13,61 @@ declare global {
   }
 }
 
+interface BuiltFor {
+  readonly preferred: PreferredApi;
+  readonly xapi?: XapiSetup;
+}
+
 /**
  * The player's `#lpm-config` script says which LMS API the package was built
- * for (`runtimeApi`); without it the runtime tries SCORM 1.2 first.
+ * for (`runtimeApi`); without it the runtime tries SCORM 1.2 first. For xAPI
+ * it also names the course activity (`xapi.activityId`).
  */
-function readPreferredApi(): PreferredApi {
+function readBuiltFor(): BuiltFor {
   try {
     const text: string | null | undefined =
       document.getElementById('lpm-config')?.textContent;
     if (text !== null && text !== undefined) {
-      const config: { runtimeApi?: unknown } = JSON.parse(text);
+      const config: {
+        runtimeApi?: unknown;
+        title?: unknown;
+        language?: unknown;
+        xapi?: { activityId?: unknown };
+      } = JSON.parse(text);
       if (config.runtimeApi === 'scorm2004') {
-        return 'scorm2004';
+        return { preferred: 'scorm2004' };
+      }
+      if (
+        config.runtimeApi === 'xapi' &&
+        typeof config.xapi?.activityId === 'string'
+      ) {
+        return {
+          preferred: 'xapi',
+          xapi: {
+            search: window.location.search,
+            content: {
+              activityId: config.xapi.activityId,
+              name: typeof config.title === 'string' ? config.title : '',
+              language:
+                typeof config.language === 'string' ? config.language : 'en',
+            },
+          },
+        };
       }
     }
   } catch {
     // Unreadable config: fall back to the default order.
   }
-  return 'scorm12';
+  return { preferred: 'scorm12' };
 }
+
+const builtFor: BuiltFor = readBuiltFor();
 
 /** Browser entry: exposes the runtime for the adapter that fits this host. */
 window.LmsPackageRuntime = createRuntime(
-  selectAdapter(window as unknown as HostWindow, readPreferredApi())
+  selectAdapter(
+    window as unknown as HostWindow,
+    builtFor.preferred,
+    builtFor.xapi
+  )
 );
