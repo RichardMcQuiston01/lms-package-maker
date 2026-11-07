@@ -22,7 +22,12 @@ services:
     ports:
       - '3000:3000'
     environment:
-      DATABASE_URL: postgresql://lms:${POSTGRES_PASSWORD:-lms-change-me}@db:5432/lms_package_maker
+      # The entrypoint builds DATABASE_URL from these and URL-encodes the password,
+      # so it may contain characters such as @ / : # %.
+      DATABASE_HOST: db
+      DATABASE_USER: lms
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-lms-change-me}
+      DATABASE_NAME: lms_package_maker
       # Required: at least 32 random characters (openssl rand -base64 48).
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env}
       ALLOW_SIGN_UP: ${ALLOW_SIGN_UP:-false}

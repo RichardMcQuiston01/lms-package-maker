@@ -78,7 +78,7 @@ cp .env.example .env   # set AUTH_SECRET (openssl rand -base64 48) and POSTGRES_
 docker compose up --build
 ```
 
-Open http://localhost:3000. The image runs the Next standalone server as a non-root user, applies migrations on start (set `SKIP_MIGRATIONS=true` to skip), keeps uploads and exports in the `/data` volume and answers `/api/health`. It reads the same settings as the app (`DATABASE_URL`, `AUTH_SECRET`, `IDENTITY_PROVIDER`, ...). For `header` or `single-user` identity, pass those variables to the `app` service.
+Open http://localhost:3000. The image runs the Next standalone server as a non-root user, applies migrations on start (set `SKIP_MIGRATIONS=true` to skip), keeps uploads and exports in the `/data` volume and answers `/api/health`. It reads the same settings as the app (`DATABASE_URL`, `AUTH_SECRET`, `IDENTITY_PROVIDER`, ...). Instead of `DATABASE_URL` you can give `DATABASE_HOST`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_NAME` (and `DATABASE_PORT`); the entrypoint builds the URL and encodes the password, which is what compose does. For `header` or `single-user` identity, pass those variables to the `app` service.
 
 ### Usage
 
