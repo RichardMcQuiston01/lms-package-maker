@@ -37,7 +37,7 @@ HTML5 and SCORM 1.2 import today.
 
 ## M4 – Distribution and extras
 
-- [ ] AICC export
+- [x] AICC export (HACP, level 1, one AU; checked against a stand-in LMS only)
 - [x] Docker image (Dockerfile and compose; the image build is not yet run in CI)
 - [ ] Electron app
 - [ ] Templates, themes, accessibility checks (WCAG 2.2 AA)

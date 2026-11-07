@@ -6,6 +6,7 @@ import {
   type ApiWindow,
   type Scorm12Api,
 } from './scorm12.js';
+import { createAiccAdapter, parseAiccLaunch, type AiccLaunch } from './aicc.js';
 import {
   createCmi5Adapter,
   parseCmi5Launch,
@@ -35,7 +36,14 @@ export interface HostWindow extends ApiWindow {
 }
 
 /** The LMS API a package asks to try first. */
-export type PreferredApi = 'scorm12' | 'scorm2004' | 'xapi' | 'cmi5';
+export type PreferredApi = 'scorm12' | 'scorm2004' | 'xapi' | 'cmi5' | 'aicc';
+
+/** What the AICC adapter needs to know about its surroundings. */
+export interface AiccSetup {
+  /** The launch URL's query string, such as `window.location.search`. */
+  readonly search: string;
+  readonly environment?: XapiEnvironment;
+}
 
 /** What the cmi5 adapter needs to know about its surroundings. */
 export interface Cmi5Setup {
@@ -65,8 +73,23 @@ export function selectAdapter(
   host: HostWindow,
   preferred: PreferredApi = 'scorm12',
   xapi?: XapiSetup,
-  cmi5?: Cmi5Setup
+  cmi5?: Cmi5Setup,
+  aicc?: AiccSetup
 ): RuntimeAdapter {
+  if (preferred === 'aicc' && aicc !== undefined) {
+    const launch: Result<AiccLaunch | null> = parseAiccLaunch(aicc.search);
+    if (!launch.ok) {
+      return createUnavailableAdapter('aicc', launch.error);
+    }
+    if (launch.value !== null) {
+      return createAiccAdapter(
+        launch.value,
+        aicc.environment ?? browserEnvironment()
+      );
+    }
+    // Not launched by an AICC LMS (a preview, or opened from disk): run standalone.
+    return createStandaloneAdapter();
+  }
   if (preferred === 'cmi5' && cmi5 !== undefined) {
     const launch: Result<Cmi5Launch | null> = parseCmi5Launch(cmi5.search);
     if (!launch.ok) {

@@ -3,6 +3,7 @@ import {
   selectAdapter,
   type HostWindow,
   type PreferredApi,
+  type AiccSetup,
   type Cmi5Setup,
   type XapiSetup,
 } from './select.js';
@@ -18,6 +19,7 @@ interface BuiltFor {
   readonly preferred: PreferredApi;
   readonly xapi?: XapiSetup;
   readonly cmi5?: Cmi5Setup;
+  readonly aicc?: AiccSetup;
 }
 
 /**
@@ -36,6 +38,12 @@ function readBuiltFor(): BuiltFor {
         language?: unknown;
         xapi?: { activityId?: unknown };
       } = JSON.parse(text);
+      if (config.runtimeApi === 'aicc') {
+        return {
+          preferred: 'aicc',
+          aicc: { search: window.location.search },
+        };
+      }
       if (config.runtimeApi === 'cmi5') {
         return {
           preferred: 'cmi5',
@@ -84,6 +92,7 @@ window.LmsPackageRuntime = createRuntime(
     window as unknown as HostWindow,
     builtFor.preferred,
     builtFor.xapi,
-    builtFor.cmi5
+    builtFor.cmi5,
+    builtFor.aicc
   )
 );

@@ -48,6 +48,7 @@ Each package under `packages/` is built to be published on its own (ESM, typed, 
 | `exporter-html5` | Plain HTML5 package |
 | `exporter-scorm12` | SCORM 1.2 package, with the SCORM 1.2 schema files (see `schemas/NOTICE.md` for origin and license) |
 | `exporter-xapi` | xAPI (TinCan) package with `tincan.xml` |
+| `exporter-aicc` | AICC package: `course.crs`, `.au`, `.des`, `.cst` |
 | `exporter-cmi5` | cmi5 package with `cmi5.xml` (checked against the cmi5 course structure schema; see `schemas/NOTICE.md`) |
 | `exporter-scorm2004` | SCORM 2004 4th Edition package, with the content packaging, ADL and simple sequencing schema files (see `schemas/NOTICE.md`) |
 
@@ -55,7 +56,7 @@ The browser scripts are bundled from source into `*.generated.ts` files (`bun ru
 
 ### Conformance tests
 
-`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper. reactive-lms reads SCORM 2004 manifests but has no `API_1484_11` yet, so the SCORM 2004 runtime is checked in Chromium against a strict stand-in host (`packages/conformance/src/scorm2004Host.ts`) that enforces the SCORM 2004 call order, value ranges and `session_time` format. reactive-lms detects `tincan.xml` packages but has no LRS, so the xAPI runtime is checked against a stand-in LRS (`packages/conformance/src/standInLrs.ts`), a real local HTTP server that checks the version header, authorization, statement shape, State API parameters and the CORS preflight. The cmi5 runtime is checked against a stand-in cmi5 LMS (`packages/conformance/src/standInCmi5Lms.ts`) that adds the one-time `fetch` address, `LMS.LaunchData`, and the cmi5 verb, ordering, result, duration, category and launch-mode rules.
+`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper. reactive-lms reads SCORM 2004 manifests but has no `API_1484_11` yet, so the SCORM 2004 runtime is checked in Chromium against a strict stand-in host (`packages/conformance/src/scorm2004Host.ts`) that enforces the SCORM 2004 call order, value ranges and `session_time` format. reactive-lms has no AICC support at all and detects `tincan.xml` packages but has no LRS, so the xAPI runtime is checked against a stand-in LRS (`packages/conformance/src/standInLrs.ts`), a real local HTTP server that checks the version header, authorization, statement shape, State API parameters and the CORS preflight. The cmi5 runtime is checked against a stand-in cmi5 LMS (`packages/conformance/src/standInCmi5Lms.ts`) that adds the one-time `fetch` address, `LMS.LaunchData`, and the cmi5 verb, ordering, result, duration, category and launch-mode rules. The AICC runtime is checked against a stand-in AICC LMS (`packages/conformance/src/standInAiccLms.ts`) that answers GetParam in the AICC layout and checks every PutParam against the AICC data model.
 
 ```bash
 bun run conformance:fetch   # clone the pinned commit into .cache/ and install it
@@ -91,7 +92,7 @@ bun run typecheck   # packages and web app
 cd apps/web && bunx prisma migrate dev && bun run dev
 ```
 
-Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2, SCORM 2004, xAPI, cmi5 or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
+Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2, SCORM 2004, xAPI, cmi5, AICC or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
 
 The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one.
 
@@ -146,6 +147,19 @@ cmi5 is stricter than SCORM or plain xAPI, so it differs from the other exports 
 - In `Browse` and `Review` launch modes only `initialized` and `terminated` are sent. An "Exit course" button ends the session and goes to the LMS's `returnURL` when it gave one; closing the window ends the session too.
 - If the score and the `masteryScore` the LMS gave disagree, the LMS's mastery score decides between `passed` and `failed`.
 - Not included: the learner's language and audio preferences are read but not used, there are no statements per page or question, and a course is one AU (no blocks or objectives).
+
+### AICC
+
+The AICC export is the four course description files (`course.crs`, `.au`, `.des`, `.cst`, level 1, one assignable unit) beside the player. An AICC LMS launches `index.html` with `AICC_SID` and `AICC_URL`, and the package speaks HACP (the HTTP AICC Communication Protocol) to that address:
+
+- **Start:** `GetParam` reads the learner's location, status, suspend data and mastery score.
+- **During:** `PutParam` sends `Lesson_Location`, `Lesson_Status` (`Incomplete`, `Completed`, `Passed`, `Failed`), `Score=raw,max,min`, `Time=HH:MM:SS` and the suspend data under `[Core_Lesson]`, each time something changes.
+- **End:** a last `PutParam` (an unfinished attempt says `Incomplete,Suspend`), then `ExitAU`.
+- **Every quiz attempt is reported as it happened.** AICC keeps one status and one score, so a later worse attempt replaces an earlier pass; the LMS decides what counts.
+- A quiz course carries its pass mark as `mastery_score` (0 to 100) in the `.au` file.
+- The browser POSTs to `AICC_URL` and reads the answer, so the LMS must allow that cross-origin request (CORS) or serve the package from its own address.
+- Not included: the optional `.ort`, `.pre` and `.cmp` files, blocks, and `PutComments`, `PutObjectives`, `PutInteractions`, `PutPath` and `PutPerformance`. The LMS's `Mastery_Score` is read but not used.
+- **Written from public descriptions and sample implementations, not from the AICC CMI001 document.** The exit-flag syntax, the `Score` field order and the `version` value (3.5) are the parts most worth checking against your LMS.
 
 ### Media
 
