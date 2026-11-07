@@ -60,6 +60,7 @@ e2eTest(
       await page
         .getByRole('button', { name: 'Insert dot.png into the page' })
         .click();
+      await page.getByRole('button', { name: 'HTML', exact: true }).click();
       expect(await page.getByLabel('Page content (HTML)').inputValue()).toMatch(
         /<img src="media:[0-9a-f-]{36}" alt="A dot">/
       );

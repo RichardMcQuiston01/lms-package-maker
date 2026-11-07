@@ -41,6 +41,7 @@ import { CompletionSettings } from './CompletionSettings';
 import { MediaPanel } from './MediaPanel';
 import { OutlinePanel, type OutlineActions } from './OutlinePanel';
 import { PagePanel } from './PagePanel';
+import type { RichTextEditorHandle } from './RichTextEditor';
 import { QuestionsPanel } from './QuestionsPanel';
 import { PreviewPane } from './PreviewPane';
 
@@ -78,6 +79,7 @@ export function CourseEditor({
   const [status, setStatus] = useState<StatusMessage>({ kind: 'idle' });
   const [previewUrl, setPreviewUrl] = useState<string>(initialPreviewUrl);
   const pageTextarea = useRef<HTMLTextAreaElement>(null);
+  const pageRichText = useRef<RichTextEditorHandle>(null);
   const courseRef = useRef<CourseModel>(course);
   courseRef.current = course;
 
@@ -170,6 +172,11 @@ export function CourseEditor({
         kind: 'error',
         message: 'Select a page before inserting media.',
       });
+      return;
+    }
+    // The visual view is mounted only while it is open.
+    if (pageRichText.current !== null) {
+      pageRichText.current.insertHtml(html);
       return;
     }
     const textarea: HTMLTextAreaElement | null = pageTextarea.current;
@@ -305,8 +312,10 @@ export function CourseEditor({
         </aside>
         <main>
           <PagePanel
+            projectId={projectId}
             page={selectedPage}
             textareaRef={pageTextarea}
+            richTextRef={pageRichText}
             onTitleChange={(title): void => {
               if (selectedPageId !== null)
                 applyEdit(updatePage(course, selectedPageId, { title }));

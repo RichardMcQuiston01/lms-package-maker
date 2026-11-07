@@ -18,9 +18,9 @@ export async function save(page: Page): Promise<void> {
   await page.getByRole('status').filter({ hasText: 'Saved' }).waitFor();
 }
 
-/** Writes the first page, saves, and checks the live preview shows it. */
+/** Types into the visual editor, saves, and checks the live preview shows it. */
 export async function editAndPreview(page: Page, text: string): Promise<void> {
-  await page.getByLabel('Page content (HTML)').fill(`<p>${text}</p>`);
+  await page.getByRole('textbox', { name: 'Page content' }).fill(text);
   await save(page);
   const frame = page.frameLocator('iframe[title="Course preview"]');
   await frame.locator('[data-action="next"]').waitFor();
@@ -44,4 +44,18 @@ export async function exportPackage(
     await Bun.file(location as string).arrayBuffer()
   );
   return { fileName: download.suggestedFilename(), bytes };
+}
+
+/** Switches the page between the visual and the HTML view. */
+export async function showView(
+  page: Page,
+  view: 'Visual' | 'HTML'
+): Promise<void> {
+  await page.getByRole('button', { name: view, exact: true }).click();
+}
+
+/** The page's HTML as the HTML view shows it (leaves the HTML view open). */
+export async function pageHtml(page: Page): Promise<string> {
+  await showView(page, 'HTML');
+  return page.getByLabel('Page content (HTML)').inputValue();
 }

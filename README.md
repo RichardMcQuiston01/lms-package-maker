@@ -94,6 +94,14 @@ Open http://localhost:3000, create a course, edit its pages, watch the preview, 
 
 The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one.
 
+### Visual page editor
+
+Each page opens in a visual editor ([Tiptap](https://tiptap.dev), MIT): paragraph and heading styles, bold, italic, underline, highlight, code, sub- and superscript, lists, quotes, code blocks, rules, links, tables and undo/redo. The **HTML** button switches to the raw HTML and back. What the editor offers is what the server keeps when a page is saved: headings start at "Heading 1" = `<h3>` because the page title is the `<h2>`, and there is no strike-through.
+
+- Uploaded images, audio and video show as real images and players while you edit; the page keeps `src="media:<id>"`. Select an image to edit its description.
+- A page that uses markup the visual editor cannot hold (`<div>`, `<span>`, `<figure>`, `<dl>`, ...) opens in the HTML view and says why. Choosing the visual view then warns that the markup would be removed, and only goes ahead if you confirm.
+- Toolbar buttons are labelled and report their state (`aria-pressed`) for screen readers. The toolbar is not yet one tab stop with arrow-key movement.
+
 ### Quizzes
 
 Add questions to any page in the editor (a page with questions becomes a quiz page). A question has one right answer or several, is worth 1 to 100 points, and can show an explanation after the learner answers. Pick how the course finishes under Completion:
