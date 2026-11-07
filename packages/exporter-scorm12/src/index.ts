@@ -14,7 +14,8 @@ import {
 import { buildScorm12Manifest } from './manifest.js';
 import { scorm12SchemaFiles } from './schemas.generated.js';
 
-export { buildScorm12Manifest, toIdentifier } from './manifest.js';
+export { buildScorm12Manifest } from './manifest.js';
+export { toIdentifier } from '@richardmcquiston01/lms-package-maker-player';
 export { scorm12SchemaFiles } from './schemas.generated.js';
 
 /**

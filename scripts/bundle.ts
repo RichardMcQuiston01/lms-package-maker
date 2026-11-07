@@ -70,15 +70,22 @@ export const TEXT_FILE_TARGETS: readonly TextFilesTarget[] = [
     directory: 'packages/exporter-scorm12/schemas',
     output: 'packages/exporter-scorm12/src/schemas.generated.ts',
   },
+  {
+    exportName: 'scorm2004SchemaFiles',
+    directory: 'packages/exporter-scorm2004/schemas',
+    output: 'packages/exporter-scorm2004/src/schemas.generated.ts',
+  },
 ];
 
-/** Builds the expected generated module text for a directory of `.xsd` files. */
+/** Builds the expected generated module text for a directory of `.xsd` and `.dtd` files. */
 export async function renderTextFilesTarget(
   target: TextFilesTarget
 ): Promise<string> {
   const directory: string = path.join(REPO_ROOT, target.directory);
   const names: string[] = (await readdir(directory))
-    .filter((name: string): boolean => name.endsWith('.xsd'))
+    .filter(
+      (name: string): boolean => name.endsWith('.xsd') || name.endsWith('.dtd')
+    )
     .sort();
   const entries: string[] = [];
   for (const name of names) {

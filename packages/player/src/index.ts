@@ -1,5 +1,5 @@
 export type { PlayerConfig } from './config.js';
-export { escapeHtml, jsonForScript } from './escape.js';
+export { escapeHtml, jsonForScript, toIdentifier } from './escape.js';
 export {
   buildPlayerFiles,
   PLAYER_ASSET_PATHS,

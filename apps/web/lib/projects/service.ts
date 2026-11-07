@@ -24,11 +24,15 @@ import type { ProjectRecord, ProjectRepository, ProjectSummary } from './types';
 export type { ServiceResult } from '../serviceResult';
 
 /** Standards the app can export today. */
-export type SupportedStandard = Extract<ExportStandard, 'html5' | 'scorm12'>;
+export type SupportedStandard = Extract<
+  ExportStandard,
+  'html5' | 'scorm12' | 'scorm2004'
+>;
 
 export const SUPPORTED_STANDARDS: readonly SupportedStandard[] = [
   'html5',
   'scorm12',
+  'scorm2004',
 ];
 
 export function isSupportedStandard(value: string): value is SupportedStandard {

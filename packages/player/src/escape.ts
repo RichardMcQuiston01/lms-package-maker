@@ -14,6 +14,11 @@ export function escapeHtml(value: string): string {
   );
 }
 
+/** Turns any text into a valid XML NCName fragment (letters, digits, `_-.`). */
+export function toIdentifier(value: string): string {
+  return value.replace(/[^A-Za-z0-9_.-]/g, '_');
+}
+
 const LINE_SEPARATOR: RegExp = new RegExp('\\u2028', 'g');
 const PARAGRAPH_SEPARATOR: RegExp = new RegExp('\\u2029', 'g');
 

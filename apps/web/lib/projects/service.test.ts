@@ -109,6 +109,28 @@ describe('project service', () => {
     );
   });
 
+  test('exports a SCORM 2004 zip with its schema files and records it', async () => {
+    const { service, repository } = createTestServices();
+    const created = await service.create(OWNER, { title: 'Safety 101' });
+    if (!created.ok) throw new Error('create failed');
+    const exported = await service.exportProject(
+      created.value.id,
+      OWNER,
+      'scorm2004'
+    );
+    expect(exported.ok).toBe(true);
+    if (exported.ok) {
+      expect(exported.value.fileName).toBe('safety-101-scorm2004.zip');
+      const names: string[] = Object.keys(unzipSync(exported.value.bytes));
+      expect(names).toContain('imsmanifest.xml');
+      expect(names).toContain('adlcp_v1p3.xsd');
+    }
+    const kept = await repository.listExports(created.value.id);
+    expect(kept.ok && kept.value.map((entry) => entry.standard)).toEqual([
+      'scorm2004',
+    ]);
+  });
+
   test('hides projects from everyone but their owner', async () => {
     const { service } = createTestServices();
     const created = await service.create(OWNER, { title: 'Private' });

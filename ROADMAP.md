@@ -29,7 +29,8 @@ HTML5 and SCORM 1.2 import today.
 
 ## M3 – Modern standards
 
-- [ ] SCORM 2004 (with sequencing)
+- [x] SCORM 2004 4th Edition export (single SCO, pass mark, no sequencing rules yet)
+- [ ] SCORM 2004 sequencing and navigation
 - [ ] xAPI (TinCan) and cmi5
 
 ## M4 – Distribution and extras

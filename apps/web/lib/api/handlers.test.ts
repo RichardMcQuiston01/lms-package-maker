@@ -120,7 +120,7 @@ describe('API handlers', () => {
     const bad = await exportProject(ctx.service, OWNER, id, 'aicc');
     expect(bad.status).toBe(400);
     expect(((await bad.json()) as { error: string }).error).toContain(
-      'html5, scorm12'
+      'html5, scorm12, scorm2004'
     );
   });
 });

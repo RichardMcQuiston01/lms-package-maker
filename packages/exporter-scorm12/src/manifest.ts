@@ -3,12 +3,8 @@ import {
   escapeHtml,
   PLAYER_ASSET_PATHS,
   PLAYER_ENTRY_PATH,
+  toIdentifier,
 } from '@richardmcquiston01/lms-package-maker-player';
-
-/** Turns any text into a valid XML NCName fragment (letters, digits, `_-.`). */
-export function toIdentifier(value: string): string {
-  return value.replace(/[^A-Za-z0-9_.-]/g, '_');
-}
 
 /**
  * Builds a SCORM 1.2 `imsmanifest.xml` with one SCO that launches the whole

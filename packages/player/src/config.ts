@@ -22,4 +22,9 @@ export interface PlayerConfig {
   /** `viewAll` completes by visiting every page; `passQuiz` by passing the quiz. */
   readonly completion: 'viewAll' | 'passQuiz';
   readonly quiz: QuizConfig | null;
+  /**
+   * The LMS API the runtime should try first when a host offers several.
+   * Absent means the default order (SCORM 1.2, then SCORM 2004).
+   */
+  readonly runtimeApi?: 'scorm2004';
 }

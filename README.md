@@ -42,17 +42,18 @@ Each package under `packages/` is built to be published on its own (ESM, typed, 
 | --- | --- |
 | `identity` | The `IdentityProvider` contract, plus `header` and `single-user` providers |
 | `model` | Course Model types and validation |
-| `runtime` | Browser runtime: SCORM 1.2 API or `postMessage` to the host |
+| `runtime` | Browser runtime: SCORM 1.2 API, SCORM 2004 API or `postMessage` to the host |
 | `player` | Static course player generated from a Course Model |
 | `exporters` | `Exporter` interface and deterministic zip |
 | `exporter-html5` | Plain HTML5 package |
 | `exporter-scorm12` | SCORM 1.2 package, with the SCORM 1.2 schema files (see `schemas/NOTICE.md` for origin and license) |
+| `exporter-scorm2004` | SCORM 2004 4th Edition package, with the content packaging, ADL and simple sequencing schema files (see `schemas/NOTICE.md`) |
 
 The browser scripts are bundled from source into `*.generated.ts` files (`bun run build:bundles`); a test fails if they are stale.
 
 ### Conformance tests
 
-`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper.
+`packages/conformance` runs exported packages against a pinned [reactive-lms](https://github.com/RichardMcQuiston01/reactive-lms) commit (`packages/conformance/reactive-lms.json`): its package detection and manifest parser, its real SCORM 1.2 `CmiStore` as `window.API` in Chromium, and its HTML5 `postMessage` mapper. reactive-lms reads SCORM 2004 manifests but has no `API_1484_11` yet, so the SCORM 2004 runtime is checked in Chromium against a strict stand-in host (`packages/conformance/src/scorm2004Host.ts`) that enforces the SCORM 2004 call order, value ranges and `session_time` format.
 
 ```bash
 bun run conformance:fetch   # clone the pinned commit into .cache/ and install it
@@ -88,7 +89,7 @@ bun run typecheck   # packages and web app
 cd apps/web && bunx prisma migrate dev && bun run dev
 ```
 
-Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2 or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
+Open http://localhost:3000, create a course, edit its pages, watch the preview, then export SCORM 1.2, SCORM 2004 or HTML5 from the toolbar. Exports are also kept under `LMS_DATA_DIR`.
 
 The database tests need `DATABASE_URL` pointing at a migrated PostgreSQL database; without it they are skipped locally, and CI provides one.
 
@@ -102,6 +103,17 @@ Add questions to any page in the editor (a page with questions becomes a quiz pa
 Scoring is exact: a pick-several question is right only when the learner picks exactly the right set, with no partial credit. Answers, the latest score and visited pages are saved in the LMS's suspend data, so learners resume where they left off.
 
 The right answers travel inside the package so it can mark answers without a server, which is how SCORM 1.2 content works. A determined learner can read them in the page source; use an LMS-side assessment if that matters.
+
+### SCORM 2004
+
+The SCORM 2004 (4th Edition) export has the same single-SCO shape as SCORM 1.2: the player handles pages and quizzes, and the package reports through `API_1484_11`:
+
+- Status is sent as `cmi.completion_status` and `cmi.success_status`. A pass sets both *completed* and *passed*; a fail sets *failed* and leaves completion *incomplete*, so the learner can retry. Every attempt is reported, as in SCORM 1.2.
+- Scores go to `cmi.score.raw`, `min`, `max` and `scaled`; progress goes to `cmi.progress_measure`; `session_time` is an ISO 8601 duration.
+- A pass mark is declared as the primary objective's minimum normalized measure (`imsss:minNormalizedMeasure`), the counterpart of `adlcp:masteryscore`. Success is then also derived from the scaled score by the LMS.
+- **No sequencing or navigation rules are used.** Pages are navigated inside the player.
+
+If an LMS offers both `API` and `API_1484_11`, each package uses the one it was built for.
 
 ### Media
 
