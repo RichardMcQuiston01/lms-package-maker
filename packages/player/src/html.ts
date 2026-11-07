@@ -15,6 +15,11 @@ export interface PlayerOptions {
   readonly assets?: ReadonlyMap<string, Uint8Array>;
   /** Makes the runtime try this LMS API first (see `PlayerConfig.runtimeApi`). */
   readonly runtimeApi?: 'scorm2004';
+  /**
+   * Makes this an xAPI package: the runtime talks to the LRS named in the
+   * launch URL and uses this IRI as the course Activity id.
+   */
+  readonly xapiActivityId?: string;
 }
 
 const ASSET_PATH_PATTERN = /^media\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
@@ -153,6 +158,13 @@ export function buildPlayerFiles(
     ...(options.runtimeApi === undefined
       ? {}
       : { runtimeApi: options.runtimeApi }),
+    ...(options.xapiActivityId === undefined
+      ? {}
+      : {
+          runtimeApi: 'xapi' as const,
+          xapi: { activityId: options.xapiActivityId },
+          language: course.language,
+        }),
   };
   const html = `<!doctype html>
 <html lang="${escapeHtml(course.language)}">
@@ -170,6 +182,7 @@ ${renderNav(course)}
 <div class="lpm-main">
 <progress max="1" value="0" aria-label="Course progress"></progress>
 <p id="lpm-status" role="status"></p>
+<p id="lpm-notice" role="alert" hidden></p>
 <p id="lpm-quiz-summary" role="status" hidden></p>
 ${renderPages(course)}
 <div class="lpm-controls">

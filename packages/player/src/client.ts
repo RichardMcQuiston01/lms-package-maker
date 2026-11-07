@@ -44,6 +44,15 @@ function showStatus(message: string): void {
   }
 }
 
+/** A problem the learner should see; unlike the status line it stays put. */
+function showNotice(message: string): void {
+  const notice: HTMLElement | null = document.getElementById('lpm-notice');
+  if (notice !== null) {
+    notice.textContent = message;
+    notice.hidden = false;
+  }
+}
+
 function readConfig(): PlayerConfig | null {
   const element: HTMLElement | null = document.getElementById('lpm-config');
   if (element === null) {
@@ -64,7 +73,7 @@ function report(label: string, result: Result<unknown>): void {
   }
 }
 
-function start(): void {
+async function start(): Promise<void> {
   const config: PlayerConfig | null = readConfig();
   if (config === null) {
     return;
@@ -93,12 +102,12 @@ function start(): void {
     return;
   }
 
-  const initial: Result<InitialState> = activeRuntime.init();
+  const initial: Result<InitialState> = await activeRuntime.start();
   const state: InitialState = initial.ok
     ? initial.value
     : { location: null, suspendData: null, status: null };
   if (!initial.ok) {
-    showStatus(`Progress will not be saved: ${initial.error}`);
+    showNotice(`Progress will not be saved: ${initial.error}`);
   }
   const saved = decodeProgress(
     state.suspendData,
@@ -389,4 +398,7 @@ function start(): void {
   show(current);
 }
 
-start();
+start().catch((cause: unknown): void => {
+  const reason: string = cause instanceof Error ? cause.message : String(cause);
+  console.error(`[lms-package] the player failed to start: ${reason}`);
+});

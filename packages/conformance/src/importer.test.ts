@@ -2,6 +2,7 @@ import { describe, expect } from 'bun:test';
 import { html5Exporter } from '@richardmcquiston01/lms-package-maker-exporter-html5';
 import { scorm12Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm12';
 import { scorm2004Exporter } from '@richardmcquiston01/lms-package-maker-exporter-scorm2004';
+import { xapiExporter } from '@richardmcquiston01/lms-package-maker-exporter-xapi';
 import {
   zipPackage,
   type Exporter,
@@ -73,6 +74,17 @@ describe('reactive-lms import', () => {
       for (const file of listed) {
         expect(index.has(file)).toBe(true);
       }
+    }
+  );
+
+  testIf(reactiveLms !== null)(
+    'detects the xAPI package from its tincan.xml, not as HTML5',
+    () => {
+      const lms = reactiveLms as ReactiveLms;
+      const index: PackageFileIndex = zipIndex(xapiExporter, lms);
+      expect(index.has('tincan.xml')).toBe(true);
+      expect(index.has('index.html')).toBe(true);
+      expect(lms.detectPackageType(index)).toBe('xapi');
     }
   );
 

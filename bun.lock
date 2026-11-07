@@ -19,6 +19,7 @@
         "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-scorm2004": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-exporter-xapi": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
         "@richardmcquiston01/lms-package-maker-identity": "workspace:*",
         "@richardmcquiston01/lms-package-maker-model": "workspace:*",
@@ -48,6 +49,7 @@
         "@richardmcquiston01/lms-package-maker-exporter-html5": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-scorm12": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporter-scorm2004": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-exporter-xapi": "workspace:*",
         "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
         "@richardmcquiston01/lms-package-maker-model": "workspace:*",
       },
@@ -87,6 +89,19 @@
     },
     "packages/exporter-scorm2004": {
       "name": "@richardmcquiston01/lms-package-maker-exporter-scorm2004",
+      "version": "0.1.0",
+      "dependencies": {
+        "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-model": "workspace:*",
+        "@richardmcquiston01/lms-package-maker-player": "workspace:*",
+      },
+      "devDependencies": {
+        "fflate": "^0.8.2",
+        "xmllint-wasm": "^5.3.0",
+      },
+    },
+    "packages/exporter-xapi": {
+      "name": "@richardmcquiston01/lms-package-maker-exporter-xapi",
       "version": "0.1.0",
       "dependencies": {
         "@richardmcquiston01/lms-package-maker-exporters": "workspace:*",
@@ -239,6 +254,8 @@
     "@richardmcquiston01/lms-package-maker-exporter-scorm12": ["@richardmcquiston01/lms-package-maker-exporter-scorm12@workspace:packages/exporter-scorm12"],
 
     "@richardmcquiston01/lms-package-maker-exporter-scorm2004": ["@richardmcquiston01/lms-package-maker-exporter-scorm2004@workspace:packages/exporter-scorm2004"],
+
+    "@richardmcquiston01/lms-package-maker-exporter-xapi": ["@richardmcquiston01/lms-package-maker-exporter-xapi@workspace:packages/exporter-xapi"],
 
     "@richardmcquiston01/lms-package-maker-exporters": ["@richardmcquiston01/lms-package-maker-exporters@workspace:packages/exporters"],
 

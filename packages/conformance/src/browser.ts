@@ -5,7 +5,7 @@ import path from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright-core';
 import type { PackageFiles } from '@richardmcquiston01/lms-package-maker-exporters';
 
-const ORIGIN = 'http://lms.test';
+export const ORIGIN = 'http://lms.test';
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   '.html': 'text/html',

@@ -101,6 +101,14 @@ e2eTest(
       expect(scormFiles).toContain('imsmanifest.xml');
       expect(scormFiles).toContain('index.html');
       expect(scormFiles.some((name) => name.startsWith('media/'))).toBe(true);
+      const scorm2004 = await exportPackage(page, 'Export SCORM 2004');
+      const scorm2004Files: string[] = Object.keys(unzipSync(scorm2004.bytes));
+      expect(scorm2004Files).toContain('imsmanifest.xml');
+      expect(scorm2004Files).toContain('adlcp_v1p3.xsd');
+      const xapi = await exportPackage(page, 'Export xAPI');
+      const xapiFiles: string[] = Object.keys(unzipSync(xapi.bytes));
+      expect(xapiFiles).toContain('tincan.xml');
+      expect(xapiFiles.some((name) => name.startsWith('media/'))).toBe(true);
       const html5 = await exportPackage(page, 'Export HTML5');
       expect(Object.keys(unzipSync(html5.bytes))).toContain('index.html');
 

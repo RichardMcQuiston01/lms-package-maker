@@ -60,6 +60,7 @@ type StatusMessage =
 const EXPORT_BUTTONS: readonly { standard: string; label: string }[] = [
   { standard: 'scorm12', label: 'Export SCORM 1.2' },
   { standard: 'scorm2004', label: 'Export SCORM 2004' },
+  { standard: 'xapi', label: 'Export xAPI' },
   { standard: 'html5', label: 'Export HTML5' },
 ];
 

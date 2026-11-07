@@ -34,6 +34,7 @@ body { margin: 0; font: 16px/1.6 system-ui, sans-serif; display: grid; grid-temp
 .lpm-controls button { padding: .5rem 1rem; border: 1px solid #8886; border-radius: .375rem; background: none; color: inherit; font: inherit; cursor: pointer; }
 #lpm-quiz-summary { font-weight: 600; margin: 0 0 .5rem; }
 #lpm-status { min-height: 1.5rem; opacity: .8; }
+#lpm-notice { margin: 0 0 .75rem; padding: .5rem .75rem; border: 1px solid currentColor; border-radius: .25rem; }
 button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 40rem) { body { grid-template-columns: 1fr; } .lpm-nav { border-right: 0; border-bottom: 1px solid #8884; } }
 `;

@@ -22,6 +22,12 @@ export interface Score {
 export interface RuntimeAdapter {
   readonly name: string;
   initialize(): Result<InitialState>;
+  /**
+   * Set by adapters that must talk to a server before the content can start
+   * (xAPI reads the saved state from the LRS). When present, `start()` uses it
+   * and `initialize()` is not used.
+   */
+  initializeAsync?(): Promise<Result<InitialState>>;
   setLocation(location: string): Result<null>;
   setSuspendData(suspendData: string): Result<null>;
   setProgress(measure: number): Result<null>;
@@ -33,7 +39,13 @@ export interface RuntimeAdapter {
 /** The single API course content uses; it never calls a standard directly. */
 export interface ContentRuntime {
   readonly adapterName: string;
+  /** Starts synchronously. Fails for adapters that need `start()`. */
   init(): Result<InitialState>;
+  /**
+   * Starts the attempt and waits for the LMS when the standard needs a round
+   * trip (xAPI). Works for every adapter; content should prefer it.
+   */
+  start(): Promise<Result<InitialState>>;
   setLocation(location: string): Result<null>;
   setSuspendData(suspendData: string): Result<null>;
   /** Progress from 0 to 1. Values outside the range are clamped. */

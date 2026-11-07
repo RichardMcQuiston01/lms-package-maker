@@ -75,23 +75,40 @@ export function createRuntime(
     return result;
   }
 
+  function begin(result: Result<InitialState>): Result<InitialState> {
+    if (!result.ok) {
+      return result;
+    }
+    initialized = true;
+    startedAt = now();
+    currentStatus = result.value.status;
+    if (currentStatus === null) {
+      applyStatus('incomplete');
+    }
+    return result;
+  }
+
   return {
     adapterName: adapter.name,
     init(): Result<InitialState> {
       if (initialized) {
         return fail('init() was already called');
       }
-      const result: Result<InitialState> = adapter.initialize();
-      if (!result.ok) {
-        return result;
+      if (adapter.initializeAsync !== undefined) {
+        return fail(
+          `the ${adapter.name} adapter starts asynchronously; use start() instead of init()`
+        );
       }
-      initialized = true;
-      startedAt = now();
-      currentStatus = result.value.status;
-      if (currentStatus === null) {
-        applyStatus('incomplete');
+      return begin(adapter.initialize());
+    },
+    async start(): Promise<Result<InitialState>> {
+      if (initialized) {
+        return fail('start() was already called');
       }
-      return result;
+      if (adapter.initializeAsync === undefined) {
+        return begin(adapter.initialize());
+      }
+      return begin(await adapter.initializeAsync());
     },
     setLocation(location: string): Result<null> {
       const active: Result<null> = requireActive('set location');
