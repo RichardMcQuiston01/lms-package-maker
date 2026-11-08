@@ -500,6 +500,61 @@ describe('cmi5 exit', () => {
   });
 });
 
+describe('cmi5 refused exit', () => {
+  const RETURN: Record<string, unknown> = {
+    contextTemplate: {},
+    launchMode: 'Normal',
+    returnURL: 'https://lms.example.com/back',
+  };
+
+  async function startedRefusing(refuseTerminated: boolean, visited: string[]) {
+    const lms = fake({ launchData: RETURN });
+    const environment: XapiEnvironment = {
+      ...lms.environment,
+      fetch: async (url, init) => {
+        if (
+          refuseTerminated &&
+          init.method === 'POST' &&
+          JSON.parse(init.body ?? '{}').verb?.id?.endsWith('/terminated')
+        ) {
+          return { status: 503, ok: false, text: async () => 'try later' };
+        }
+        return lms.environment.fetch(url, init);
+      },
+    };
+    const runtime = createRuntime(
+      createCmi5Adapter(LAUNCH, CONTENT, environment, (url: string): void => {
+        visited.push(url);
+      })
+    );
+    await runtime.start();
+    return runtime;
+  }
+
+  test('reports a refused final statement every time and stays on the page', async () => {
+    const visited: string[] = [];
+    const original = console.error;
+    console.error = (): void => undefined;
+    try {
+      const runtime = await startedRefusing(true, visited);
+      const first = await runtime.exit();
+      expect(!first.ok && first.error).toContain('503');
+      expect(!first.ok && first.error).toContain('terminated');
+      expect((await runtime.exit()).ok).toBe(false);
+      expect(visited).toEqual([]);
+    } finally {
+      console.error = original;
+    }
+  });
+
+  test('a failure earlier in the session is not blamed on the exit', async () => {
+    const visited: string[] = [];
+    const runtime = await startedRefusing(false, visited);
+    expect((await runtime.exit()).ok).toBe(true);
+    expect(visited).toEqual(['https://lms.example.com/back']);
+  });
+});
+
 describe('selectAdapter for a cmi5 package', () => {
   const search = (params: Record<string, string>): string =>
     `?${new URLSearchParams(params).toString()}`;
