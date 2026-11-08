@@ -412,8 +412,14 @@ async function start(): Promise<void> {
             ? 'The session has ended. You can close this window.'
             : `The session could not be ended cleanly: ${result.error}`
         );
+        if (!result.ok) {
+          // Leave the way open to try again, here or by closing the window.
+          ended = false;
+          button.disabled = false;
+          return;
+        }
         // Browsers only let a script close a window that a script opened.
-        if (result.ok && window.opener !== null) {
+        if (window.opener !== null) {
           window.close();
         }
       });

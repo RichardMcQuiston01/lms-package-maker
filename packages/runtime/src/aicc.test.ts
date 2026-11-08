@@ -359,6 +359,78 @@ describe('aicc adapter through the runtime', () => {
   });
 });
 
+describe('aicc adapter: ending the session', () => {
+  test('finish() waits for PutParam and ExitAU and reports a clean exit', async () => {
+    const lms = fake();
+    const runtime = createRuntime(createAiccAdapter(LAUNCH, lms.environment));
+    await runtime.start();
+    const exited = await runtime.exit();
+    expect(exited.ok).toBe(true);
+    expect(lms.commands().slice(-2)).toEqual(['PutParam', 'ExitAU']);
+  });
+
+  test('finish() reports it when the LMS refuses ExitAU, every time it is asked', async () => {
+    const lms = fake();
+    const environment: XapiEnvironment = {
+      ...lms.environment,
+      fetch: async (url, init) => {
+        if (new URLSearchParams(init.body ?? '').get('command') === 'ExitAU') {
+          return {
+            status: 200,
+            ok: true,
+            text: async () => 'error=3\r\nerror_text=Invalid Session ID',
+          };
+        }
+        return lms.environment.fetch(url, init);
+      },
+    };
+    const original = console.error;
+    console.error = (): void => undefined;
+    try {
+      const runtime = createRuntime(createAiccAdapter(LAUNCH, environment));
+      await runtime.start();
+      const first = await runtime.exit();
+      expect(!first.ok && first.error).toContain('ExitAU');
+      expect(!first.ok && first.error).toContain('Invalid Session ID');
+      expect((await runtime.exit()).ok).toBe(false);
+    } finally {
+      console.error = original;
+    }
+  });
+
+  test('a refused PutParam earlier in the session is not blamed on the exit', async () => {
+    const lms = fake();
+    let puts = 0;
+    const environment: XapiEnvironment = {
+      ...lms.environment,
+      fetch: async (url, init) => {
+        if (
+          new URLSearchParams(init.body ?? '').get('command') === 'PutParam' &&
+          (puts += 1) === 1
+        ) {
+          return {
+            status: 200,
+            ok: true,
+            text: async () => 'error=3\r\nerror_text=Invalid Session ID',
+          };
+        }
+        return lms.environment.fetch(url, init);
+      },
+    };
+    const original = console.error;
+    console.error = (): void => undefined;
+    try {
+      const runtime = createRuntime(createAiccAdapter(LAUNCH, environment));
+      await runtime.start();
+      runtime.setLocation('p2'); // refused
+      await lms.flush();
+      expect((await runtime.exit()).ok).toBe(true);
+    } finally {
+      console.error = original;
+    }
+  });
+});
+
 describe('selectAdapter for an AICC package', () => {
   test('uses AICC when launched by an LMS, runs standalone otherwise', () => {
     const lms = fake();

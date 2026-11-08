@@ -48,6 +48,8 @@ export class StandInAiccLms {
   private readonly ended: Set<string> = new Set();
   private readonly server: ReturnType<typeof Bun.serve>;
   masteryScore: number | null = null;
+  /** When set, the next request with this command is answered with error 3 (not a violation). */
+  refuseNext: string | null = null;
 
   constructor() {
     this.server = Bun.serve({
@@ -164,6 +166,13 @@ export class StandInAiccLms {
         'Invalid Command',
         `${command} without a version`
       );
+    }
+    if (
+      this.refuseNext !== null &&
+      command.toLowerCase() === this.refuseNext.toLowerCase()
+    ) {
+      this.refuseNext = null;
+      return this.answer(request, 3, 'Invalid Session ID');
     }
     const session = form['session_id'] ?? '';
     if (this.ended.has(session)) {

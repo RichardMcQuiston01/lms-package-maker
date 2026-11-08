@@ -330,15 +330,22 @@ export function createXapiAdapter(
       return saveState();
     },
     terminate(sessionSeconds: number): Result<null> {
+      transport.beginExit();
       sendStatement('terminated', {
         duration: formatIsoDuration(sessionSeconds),
       });
       return ok();
     },
     async finish(): Promise<Result<null>> {
-      // Closing the window right after Exit must not lose the last statements.
+      // Closing the window right after Exit must not lose the last statements,
+      // and a refusal of the final requests must not be reported as a clean exit.
       await transport.drain();
-      return ok();
+      const failures: string[] = transport.exitFailures();
+      return failures.length === 0
+        ? ok()
+        : fail(
+            `the LRS did not accept the last requests: ${failures.join('; ')}`
+          );
     },
   };
 }

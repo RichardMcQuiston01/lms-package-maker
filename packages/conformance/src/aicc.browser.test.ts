@@ -380,4 +380,25 @@ describe('AICC package against a stand-in AICC LMS', () => {
     },
     60_000
   );
+
+  testIf(reactiveLms !== null)(
+    'if the LMS refuses ExitAU the page says the session was not ended cleanly',
+    async () => {
+      lms = new StandInAiccLms();
+      const origin = servePackage(viewAllFiles);
+      const { page } = await launch(origin, lms.launch('session-1'));
+      lms.refuseNext = 'ExitAU';
+      await page.getByRole('button', { name: 'Exit course' }).click();
+      const message = page.locator('#lpm-status');
+      await message.getByText('could not be ended cleanly').waitFor();
+      expect(await message.textContent()).toContain('Invalid Session ID');
+      expect(
+        await page.getByRole('button', { name: 'Exit course' }).isEnabled()
+      ).toBe(true);
+      await page.close();
+      await lms.stop();
+      lms = null;
+    },
+    60_000
+  );
 });
