@@ -114,6 +114,11 @@ e2eTest(
       const cmi5Files: string[] = Object.keys(unzipSync(cmi5.bytes));
       expect(cmi5Files).toContain('cmi5.xml');
       expect(cmi5Files).not.toContain('tincan.xml');
+      const aicc = await exportPackage(page, 'Export AICC');
+      const aiccFiles: string[] = Object.keys(unzipSync(aicc.bytes));
+      for (const extension of ['crs', 'au', 'des', 'cst']) {
+        expect(aiccFiles).toContain(`course.${extension}`);
+      }
       const html5 = await exportPackage(page, 'Export HTML5');
       expect(Object.keys(unzipSync(html5.bytes))).toContain('index.html');
 

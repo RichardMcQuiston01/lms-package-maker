@@ -26,6 +26,8 @@ export interface PlayerOptions {
    * to the LMS.
    */
   readonly cmi5?: boolean;
+  /** Makes this an AICC AU: the runtime talks HACP to the LMS named in the launch URL. */
+  readonly aicc?: boolean;
 }
 
 const ASSET_PATH_PATTERN = /^media\/[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
@@ -164,6 +166,7 @@ export function buildPlayerFiles(
     ...(options.runtimeApi === undefined
       ? {}
       : { runtimeApi: options.runtimeApi }),
+    ...(options.aicc === true ? { runtimeApi: 'aicc' as const } : {}),
     ...(options.cmi5 === true
       ? { runtimeApi: 'cmi5' as const, language: course.language }
       : {}),

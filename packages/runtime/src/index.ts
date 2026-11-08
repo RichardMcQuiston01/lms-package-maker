@@ -14,6 +14,15 @@ export {
   type Scorm2004Api,
 } from './scorm2004.js';
 export {
+  createAiccAdapter,
+  formatAiccTime,
+  parseAiccLaunch,
+  parseGetParamResponse,
+  readLessonStatus,
+  type AiccLaunch,
+  type AiccParams,
+} from './aicc.js';
+export {
   createCmi5Adapter,
   parseCmi5Launch,
   parseLaunchData,
@@ -33,6 +42,7 @@ export {
 export {
   selectAdapter,
   type HostWindow,
+  type AiccSetup,
   type Cmi5Setup,
   type PreferredApi,
   type XapiSetup,
