@@ -335,5 +335,10 @@ export function createXapiAdapter(
       });
       return ok();
     },
+    async finish(): Promise<Result<null>> {
+      // Closing the window right after Exit must not lose the last statements.
+      await transport.drain();
+      return ok();
+    },
   };
 }

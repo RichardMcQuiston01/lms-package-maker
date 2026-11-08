@@ -228,7 +228,7 @@ describe('aiccExporter', () => {
     if (result.ok) {
       const html = new TextDecoder().decode(result.value.get('index.html'));
       expect(html).toContain('"runtimeApi":"aicc"');
-      expect(html).not.toContain('data-action="exit"');
+      expect(html).toContain('data-action="exit"');
     }
   });
 

@@ -394,8 +394,10 @@ async function start(): Promise<void> {
   window.addEventListener('pagehide', end);
   window.addEventListener('beforeunload', end);
 
-  // "Exit course" (cmi5): end the session on purpose, then let the adapter
-  // finish (cmi5 sends its last statements and returns to the LMS).
+  // "Exit course": end the session on purpose, then let the adapter finish
+  // (statements and requests still in flight are sent; cmi5 returns to the
+  // LMS). A window the LMS opened can close itself; others cannot, so the page
+  // says the session is over.
   document
     .querySelector<HTMLButtonElement>('[data-action="exit"]')
     ?.addEventListener('click', (event: MouseEvent): void => {
@@ -410,6 +412,10 @@ async function start(): Promise<void> {
             ? 'The session has ended. You can close this window.'
             : `The session could not be ended cleanly: ${result.error}`
         );
+        // Browsers only let a script close a window that a script opened.
+        if (result.ok && window.opener !== null) {
+          window.close();
+        }
       });
     });
 

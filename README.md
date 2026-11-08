@@ -144,7 +144,7 @@ cmi5 is stricter than SCORM or plain xAPI, so it differs from the other exports 
 
 - `initialized` first and `terminated` last, with durations; `completed`, `passed` and `failed` carry the moveOn category, and `passed`/`failed` the mastery score. A `passed` or `completed` is sent once per registration, and a `failed` never follows a `passed`.
 - **Only one of `passed` or `failed` per session.** Every quiz attempt is still on record, as a `scored` statement with its score, but the cmi5 result is `passed` the first time the learner passes (sent at once), otherwise `failed` for the most recent attempt when the session ends. If the window is closed without the page ending cleanly, a pending `failed` is not sent.
-- In `Browse` and `Review` launch modes only `initialized` and `terminated` are sent. An "Exit course" button ends the session and goes to the LMS's `returnURL` when it gave one; closing the window ends the session too.
+- In `Browse` and `Review` launch modes only `initialized` and `terminated` are sent. The "Exit course" button goes to the LMS's `returnURL` when it gave one; closing the window ends the session too.
 - If the score and the `masteryScore` the LMS gave disagree, the LMS's mastery score decides between `passed` and `failed`.
 - Not included: the learner's language and audio preferences are read but not used, there are no statements per page or question, and a course is one AU (no blocks or objectives).
 
@@ -160,6 +160,12 @@ The AICC export is the four course description files (`course.crs`, `.au`, `.des
 - The browser POSTs to `AICC_URL` and reads the answer, so the LMS must allow that cross-origin request (CORS) or serve the package from its own address.
 - Not included: the optional `.ort`, `.pre` and `.cmp` files, blocks, and `PutComments`, `PutObjectives`, `PutInteractions`, `PutPath` and `PutPerformance`. The LMS's `Mastery_Score` is read but not used.
 - **Written from public descriptions and sample implementations, not from the AICC CMI001 document.** The exit-flag syntax, the `Score` field order and the `version` value (3.5) are the parts most worth checking against your LMS.
+
+### Exit course
+
+SCORM 1.2, SCORM 2004, xAPI, cmi5 and AICC packages have an **Exit course** button. It ends the session on purpose: the standard's own final save and exit call (`LMSFinish`, `Terminate`, a `terminated` statement, or `PutParam` then `ExitAU`), waiting until requests still in flight have been sent. It then closes the window if the LMS opened it with a script, because browsers refuse to close any other window; otherwise the page says "The session has ended. You can close this window." In cmi5 it goes to the LMS's `returnURL` instead when one was given. Closing the window without the button still ends the session, and pressing the button first means it ends only once.
+
+The plain HTML5 export has no button, because it lives inside someone else's page (the host decides what happens to the frame), and the editor preview has none either. A content button is ordinary SCORM, xAPI and AICC practice, but I have not checked it against the text of each specification: it only calls the exit calls those standards already require at the end of a session.
 
 ### Media
 

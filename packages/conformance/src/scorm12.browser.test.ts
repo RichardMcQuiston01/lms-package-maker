@@ -99,4 +99,27 @@ describe('SCORM 1.2 package against the real reactive-lms CmiStore', () => {
     },
     60_000
   );
+
+  testIf(reactiveLms !== null)(
+    'Exit course ends the session: session time is saved and the page says so',
+    async () => {
+      const { page, problems } = await launch({});
+      const frame = page.frameLocator('#f');
+      await frame.locator('[data-action="next"]').click();
+      await frame.getByRole('button', { name: 'Exit course' }).click();
+      await frame
+        .locator('#lpm-status')
+        .getByText('The session has ended')
+        .waitFor();
+      const values = await snapshot(page);
+      expect(values['cmi.core.session_time']).toMatch(/^\d\d:\d\d:\d\d/);
+      expect(values['cmi.core.exit']).toBe('suspend');
+      expect(
+        await frame.getByRole('button', { name: 'Exit course' }).isDisabled()
+      ).toBe(true);
+      expect(problems).toEqual([]);
+      await page.close();
+    },
+    60_000
+  );
 });

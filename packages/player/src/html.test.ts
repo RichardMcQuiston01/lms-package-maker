@@ -54,6 +54,7 @@ describe('buildPlayerFiles', () => {
     const plain: string = text({});
     expect(plain).not.toContain('data-action="exit"');
     expect(plain).not.toContain('runtimeApi');
+    expect(text({ exitButton: true })).toContain('data-action="exit"');
     const cmi5: string = text({ cmi5: true });
     expect(cmi5).toContain('data-action="exit"');
     expect(cmi5).toContain('"runtimeApi":"cmi5"');

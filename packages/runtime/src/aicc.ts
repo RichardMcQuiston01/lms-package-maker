@@ -348,5 +348,10 @@ export function createAiccAdapter(
       enqueue('ExitAU', null);
       return ok();
     },
+    async finish(): Promise<Result<null>> {
+      // Closing the window right after Exit must not lose PutParam or ExitAU.
+      await queue;
+      return ok();
+    },
   };
 }

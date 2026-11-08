@@ -319,4 +319,65 @@ describe('AICC package against a stand-in AICC LMS', () => {
     },
     60_000
   );
+
+  testIf(reactiveLms !== null)(
+    'Exit course sends the last PutParam and ExitAU before the page says the session is over',
+    async () => {
+      lms = new StandInAiccLms();
+      const origin = servePackage(viewAllFiles);
+      const { page, problems } = await launch(origin, lms.launch('session-1'));
+      await page.locator('[data-action="next"]').click();
+      await page.locator('[data-action="next"]').click();
+      await page.getByRole('button', { name: 'Exit course' }).click();
+      await page
+        .locator('#lpm-status')
+        .getByText('The session has ended')
+        .waitFor();
+      expect(lms.commands().slice(-2)).toEqual(['PutParam', 'ExitAU']);
+      expect(lms.learner.status).toBe('Completed');
+      // closing the window afterwards sends nothing more
+      const before = lms.requests.length;
+      await leave(page);
+      await Bun.sleep(150);
+      expect(lms.requests.length).toBe(before);
+      expect(lms.violations).toEqual([]);
+      expect(problems).toEqual([]);
+      await page.close();
+      await lms.stop();
+      lms = null;
+    },
+    60_000
+  );
+
+  testIf(reactiveLms !== null)(
+    'a window the LMS opened closes itself after Exit course',
+    async () => {
+      lms = new StandInAiccLms();
+      const origin = servePackage(viewAllFiles);
+      const query = new URLSearchParams(lms.launch('session-1')).toString();
+      const launcher: Page = await (browser as Browser).newPage();
+      // a page that opens the course in a new window, as an LMS does
+      await launcher.route(`${origin}/launcher.html`, (route) =>
+        route.fulfill({
+          contentType: 'text/html',
+          body: `<button onclick="window.open('${origin}/index.html?${query}')">Launch</button>`,
+        })
+      );
+      await launcher.goto(`${origin}/launcher.html`);
+      const [popup] = await Promise.all([
+        launcher.waitForEvent('popup'),
+        launcher.getByRole('button', { name: 'Launch' }).click(),
+      ]);
+      await popup.locator('[data-action="next"]').waitFor();
+      const closed = popup.waitForEvent('close');
+      await popup.getByRole('button', { name: 'Exit course' }).click();
+      await closed;
+      expect(lms.commands().slice(-2)).toEqual(['PutParam', 'ExitAU']);
+      expect(lms.violations).toEqual([]);
+      await launcher.close();
+      await lms.stop();
+      lms = null;
+    },
+    60_000
+  );
 });

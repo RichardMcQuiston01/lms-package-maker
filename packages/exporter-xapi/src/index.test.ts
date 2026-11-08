@@ -146,3 +146,15 @@ describe('xapiExporter', () => {
     expect(withMedia.ok && withMedia.value.has('media/a.png')).toBe(true);
   });
 });
+
+describe('Exit button', () => {
+  test('the package has an Exit course button', () => {
+    const result = xapiExporter.export(course);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(
+        new TextDecoder().decode(result.value.get('index.html'))
+      ).toContain('data-action="exit"');
+    }
+  });
+});

@@ -99,3 +99,15 @@ describe('scorm12Exporter', () => {
     }
   });
 });
+
+describe('Exit button', () => {
+  test('the package has an Exit course button', () => {
+    const result = scorm12Exporter.export(course);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(
+        new TextDecoder().decode(result.value.get('index.html'))
+      ).toContain('data-action="exit"');
+    }
+  });
+});

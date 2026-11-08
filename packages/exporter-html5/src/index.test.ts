@@ -39,3 +39,15 @@ describe('html5Exporter', () => {
     expect(outside.ok).toBe(false);
   });
 });
+
+describe('Exit button', () => {
+  test('a plain HTML5 package has none: it lives in someone else’s page', () => {
+    const result = html5Exporter.export(course);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(
+        new TextDecoder().decode(result.value.get('index.html'))
+      ).not.toContain('data-action="exit"');
+    }
+  });
+});
