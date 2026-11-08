@@ -46,6 +46,11 @@ export interface XapiConnection {
  */
 export class XapiTransport {
   private queue: Promise<void> = Promise.resolve();
+  private readonly failed: {
+    readonly exit: boolean;
+    readonly message: string;
+  }[] = [];
+  private exiting = false;
 
   constructor(
     readonly connection: XapiConnection,
@@ -107,11 +112,27 @@ export class XapiTransport {
 
   /** Queues work behind earlier requests. */
   enqueue(label: string, send: () => Promise<void>): void {
+    // Whether the request belongs to the end of the session is decided when it
+    // is queued, not when it fails: an earlier request may still be in flight.
+    const exit: boolean = this.exiting;
     this.queue = this.queue.then(send).catch((cause: unknown): void => {
       const reason: string =
         cause instanceof Error ? cause.message : String(cause);
+      this.failed.push({ exit, message: `${label} failed: ${reason}` });
       console.error(`[lms-package] xAPI ${label} failed: ${reason}`);
     });
+  }
+
+  /** From now on, requests queued belong to the end of the session. */
+  beginExit(): void {
+    this.exiting = true;
+  }
+
+  /** The failures of requests that were queued once the session began to end. */
+  exitFailures(): string[] {
+    return this.failed
+      .filter((entry): boolean => entry.exit)
+      .map((entry): string => entry.message);
   }
 
   /** Resolves once everything queued so far has been sent. */

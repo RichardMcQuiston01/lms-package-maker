@@ -545,6 +545,7 @@ export function createCmi5Adapter(
         return ok();
       }
       terminated = true;
+      transport.beginExit();
       const now: Date = environment.now();
       if (
         recording() &&
@@ -559,6 +560,13 @@ export function createCmi5Adapter(
     },
     async finish(): Promise<Result<null>> {
       await transport.drain();
+      const failures: string[] = transport.exitFailures();
+      if (failures.length > 0) {
+        // Stay on the page so the learner can retry; leaving would hide it.
+        return fail(
+          `the LMS did not accept the last requests: ${failures.join('; ')}`
+        );
+      }
       if (data?.returnUrl != null) {
         redirect(data.returnUrl);
       }

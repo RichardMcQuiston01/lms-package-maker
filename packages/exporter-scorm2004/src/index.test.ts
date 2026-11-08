@@ -266,3 +266,15 @@ describe('schema files in the package', () => {
     }
   });
 });
+
+describe('Exit button', () => {
+  test('the package has an Exit course button', () => {
+    const result = scorm2004Exporter.export(course);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(
+        new TextDecoder().decode(result.value.get('index.html'))
+      ).toContain('data-action="exit"');
+    }
+  });
+});

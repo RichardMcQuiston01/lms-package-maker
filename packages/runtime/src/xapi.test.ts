@@ -344,6 +344,79 @@ describe('xapi adapter through the runtime', () => {
   });
 });
 
+describe('xapi adapter: ending the session', () => {
+  test('finish() waits for the last requests and reports a clean exit', async () => {
+    const lrs = fakeLrs();
+    const runtime = createRuntime(
+      createXapiAdapter(LAUNCH, CONTENT, lrs.environment)
+    );
+    await runtime.start();
+    runtime.complete();
+    const exited = await runtime.exit();
+    expect(exited.ok).toBe(true);
+    expect(lrs.statements().at(-1)?.body).toMatchObject({
+      verb: { id: 'http://adlnet.gov/expapi/verbs/terminated' },
+    });
+  });
+
+  test('finish() reports it when the LRS refuses the last requests, every time it is asked', async () => {
+    const lrs = fakeLrs();
+    const environment: XapiEnvironment = {
+      ...lrs.environment,
+      fetch: async (url, init) => {
+        if (
+          init.method === 'POST' &&
+          JSON.parse(init.body ?? '{}').verb?.id?.endsWith('/terminated')
+        ) {
+          return { status: 503, ok: false, text: async () => 'try later' };
+        }
+        return lrs.environment.fetch(url, init);
+      },
+    };
+    const original = console.error;
+    console.error = (): void => undefined;
+    try {
+      const runtime = createRuntime(
+        createXapiAdapter(LAUNCH, CONTENT, environment)
+      );
+      await runtime.start();
+      const first = await runtime.exit();
+      expect(!first.ok && first.error).toContain('503');
+      expect(!first.ok && first.error).toContain('terminated');
+      const again = await runtime.exit();
+      expect(again.ok).toBe(false);
+    } finally {
+      console.error = original;
+    }
+  });
+
+  test('a failure earlier in the session is not blamed on the exit', async () => {
+    const lrs = fakeLrs();
+    let first = true;
+    const environment: XapiEnvironment = {
+      ...lrs.environment,
+      fetch: async (url, init) => {
+        if (init.method === 'POST' && first) {
+          first = false;
+          return { status: 400, ok: false, text: async () => 'bad' };
+        }
+        return lrs.environment.fetch(url, init);
+      },
+    };
+    const original = console.error;
+    console.error = (): void => undefined;
+    try {
+      const runtime = createRuntime(
+        createXapiAdapter(LAUNCH, CONTENT, environment)
+      );
+      await runtime.start(); // the 'initialized' statement is refused
+      expect((await runtime.exit()).ok).toBe(true);
+    } finally {
+      console.error = original;
+    }
+  });
+});
+
 describe('selectAdapter for an xAPI package', () => {
   const search = (params: Record<string, string>): string =>
     `?${new URLSearchParams(params).toString()}`;

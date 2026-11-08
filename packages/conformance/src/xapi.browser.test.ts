@@ -354,4 +354,34 @@ describe('xAPI package against a stand-in LRS', () => {
     },
     60_000
   );
+
+  testIf(reactiveLms !== null)(
+    'Exit course sends terminated before the page says the session is over',
+    async () => {
+      lrs = new StandInLrs(AUTH);
+      const { page, problems } = await launch(viewAllFiles, launchQuery(lrs));
+      await statementsReceived(lrs, 1);
+      await page.locator('[data-action="next"]').click();
+      await page.locator('[data-action="next"]').click();
+      await page.getByRole('button', { name: 'Exit course' }).click();
+      await page
+        .locator('#lpm-status')
+        .getByText('The session has ended')
+        .waitFor();
+      // the page waits for the LRS, so the last statements are already there
+      expect(lrs.verbs()).toEqual(['initialized', 'completed', 'terminated']);
+      // closing the window afterwards does not terminate a second time
+      await leave(page);
+      await Bun.sleep(150);
+      expect(lrs.verbs().filter((verb) => verb === 'terminated')).toHaveLength(
+        1
+      );
+      expect(lrs.violations).toEqual([]);
+      expect(problems).toEqual([]);
+      await page.close();
+      await lrs.stop();
+      lrs = null;
+    },
+    60_000
+  );
 });

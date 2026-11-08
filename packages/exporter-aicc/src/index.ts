@@ -34,6 +34,7 @@ export const aiccExporter: Exporter = {
   export(course: CourseModel, options?: ExportOptions): Result<PackageFiles> {
     const assets: ReadonlyMap<string, Uint8Array> | undefined = options?.assets;
     const player: Result<PlayerFiles> = buildPlayerFiles(course, {
+      exitButton: true,
       aicc: true,
       ...(assets === undefined ? {} : { assets }),
     });

@@ -13,7 +13,7 @@ const HOST_SCRIPT = String.raw`
 (function () {
   var seed = JSON.parse(document.currentScript.getAttribute('data-seed') || '{}');
   var data = Object.assign({}, seed);
-  var state = { initialized: false, terminated: false };
+  var state = { initialized: false, terminated: false, failTerminate: false };
   var calls = [];
   var violations = [];
   var lastError = '0';
@@ -55,6 +55,7 @@ const HOST_SCRIPT = String.raw`
       calls.push('Terminate(' + p + ')');
       if (p !== '') { return fail(201, 'Terminate("' + p + '")'); }
       if (!state.initialized) { return fail(112, 'Terminate before Initialize'); }
+      if (state.failTerminate) { state.failTerminate = false; return fail(111, 'Terminate refused (simulated)'); }
       state.terminated = true; state.initialized = false; lastError = '0'; return 'true';
     },
     GetValue: function (e) {

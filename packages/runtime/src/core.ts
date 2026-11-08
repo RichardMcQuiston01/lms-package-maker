@@ -76,12 +76,21 @@ export function createRuntime(
   }
 
   function terminateNow(): Result<null> {
+    if (terminated) {
+      // Ending twice is safe: the first time already ended the session.
+      return ok();
+    }
     const active: Result<null> = requireActive('terminate');
     if (!active.ok) {
       return active;
     }
-    terminated = true;
-    return adapter.terminate(Math.max(0, (now() - startedAt) / 1000));
+    const result: Result<null> = adapter.terminate(
+      Math.max(0, (now() - startedAt) / 1000)
+    );
+    // A failed attempt stays open, so the learner (or closing the window) can
+    // try again; other calls only stop once the session really ended.
+    terminated = result.ok;
+    return result;
   }
 
   function begin(result: Result<InitialState>): Result<InitialState> {

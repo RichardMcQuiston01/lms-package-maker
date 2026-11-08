@@ -26,6 +26,13 @@ export interface PlayerOptions {
    * to the LMS.
    */
   readonly cmi5?: boolean;
+  /**
+   * Adds an "Exit course" button that ends the session on purpose (the final
+   * save and the standard's own exit call) and then closes the window when the
+   * browser allows it. For packages an LMS launches; not for the editor preview
+   * or a plain HTML5 package that lives inside someone else's page.
+   */
+  readonly exitButton?: boolean;
   /** Makes this an AICC AU: the runtime talks HACP to the LMS named in the launch URL. */
   readonly aicc?: boolean;
 }
@@ -179,7 +186,7 @@ export function buildPlayerFiles(
         }),
   };
   const exitButton: string =
-    options.cmi5 === true
+    options.cmi5 === true || options.exitButton === true
       ? '\n<button type="button" data-action="exit">Exit course</button>'
       : '';
   const html = `<!doctype html>

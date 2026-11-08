@@ -132,3 +132,43 @@ describe('status changes', () => {
     expect(sent).toEqual(['passed']);
   });
 });
+
+describe('ending a session', () => {
+  test('a failed terminate can be tried again; a successful one is final and safe to repeat', () => {
+    let attempts = 0;
+    const runtime = createRuntime({
+      ...createStandaloneAdapter(),
+      terminate: () => {
+        attempts += 1;
+        return attempts === 1
+          ? { ok: false, error: 'LMSFinish refused' }
+          : { ok: true, value: null };
+      },
+    });
+    runtime.init();
+    const first = runtime.terminate();
+    expect(first).toEqual({ ok: false, error: 'LMSFinish refused' });
+    // not terminated yet, so the content can still save
+    expect(runtime.setLocation('x').ok).toBe(true);
+    expect(runtime.terminate().ok).toBe(true);
+    expect(runtime.terminate().ok).toBe(true);
+    expect(attempts).toBe(2);
+    expect(runtime.setLocation('x').ok).toBe(false);
+  });
+
+  test('exit() reports a terminate failure and can be repeated', async () => {
+    let attempts = 0;
+    const runtime = createRuntime({
+      ...createStandaloneAdapter(),
+      terminate: () => {
+        attempts += 1;
+        return attempts === 1
+          ? { ok: false, error: 'LMSFinish refused' }
+          : { ok: true, value: null };
+      },
+    });
+    runtime.init();
+    expect((await runtime.exit()).ok).toBe(false);
+    expect((await runtime.exit()).ok).toBe(true);
+  });
+});

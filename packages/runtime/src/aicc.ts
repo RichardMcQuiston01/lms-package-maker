@@ -194,6 +194,8 @@ export function createAiccAdapter(
   let score: Score | null = null;
   let startedAt = 0;
   let terminated = false;
+  /** Failures of the requests sent while the session was ending. */
+  const exitFailures: string[] = [];
 
   function form(command: string, data: string | null): string {
     return new URLSearchParams({
@@ -215,6 +217,8 @@ export function createAiccAdapter(
 
   /** Queues a request behind earlier ones and reports a refusal on the console. */
   function enqueue(command: string, data: string | null): void {
+    // Decided when the request is queued: an earlier one may still be in flight.
+    const atExit: boolean = terminated;
     queue = queue
       .then(async (): Promise<void> => {
         const response = await post(command, data);
@@ -235,6 +239,9 @@ export function createAiccAdapter(
       .catch((cause: unknown): void => {
         const reason: string =
           cause instanceof Error ? cause.message : String(cause);
+        if (atExit) {
+          exitFailures.push(`${command} failed: ${reason}`);
+        }
         console.error(`[lms-package] AICC ${command} failed: ${reason}`);
       });
   }
@@ -347,6 +354,14 @@ export function createAiccAdapter(
       enqueue('PutParam', coreData(finished ? null : 'Suspend', seconds));
       enqueue('ExitAU', null);
       return ok();
+    },
+    async finish(): Promise<Result<null>> {
+      // Closing the window right after Exit must not lose PutParam or ExitAU,
+      // and a refusal of either must not be reported as a clean exit.
+      await queue;
+      return exitFailures.length === 0
+        ? ok()
+        : fail(`the LMS did not accept the exit: ${exitFailures.join('; ')}`);
     },
   };
 }

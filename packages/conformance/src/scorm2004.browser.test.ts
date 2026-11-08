@@ -203,4 +203,73 @@ describe('SCORM 2004 package against a strict SCORM 2004 host', () => {
     },
     60_000
   );
+
+  testIf(reactiveLms !== null)(
+    'Exit course terminates the session once, and the page says so',
+    async () => {
+      const { page, problems } = await openWithScorm2004Host(
+        browser as Browser,
+        viewAllFiles,
+        {}
+      );
+      const frame: FrameLocator = page.frameLocator('#f');
+      await frame.locator('[data-action="next"]').click();
+      await frame.locator('[data-action="next"]').click();
+      await frame.getByRole('button', { name: 'Exit course' }).click();
+      await frame
+        .locator('#lpm-status')
+        .getByText('The session has ended')
+        .waitFor();
+      expect(await isTerminated(page)).toBe(true);
+      const values = await data(page);
+      expect(values['cmi.completion_status']).toBe('completed');
+      expect(values['cmi.session_time']).toMatch(/^PT\d+H\d+M\d+\.\d\dS$/);
+      // closing the window afterwards does not terminate a second time
+      await leave(page);
+      const calls: string[] = await page.evaluate(
+        () => (window as any).__lms.calls
+      );
+      expect(calls.filter((call) => call.startsWith('Terminate'))).toHaveLength(
+        1
+      );
+      expect(await violations(page)).toEqual([]);
+      expect(problems).toEqual([]);
+      await page.close();
+    },
+    60_000
+  );
+
+  testIf(reactiveLms !== null)(
+    'if the LMS refuses Terminate the page says so and Exit course can be tried again',
+    async () => {
+      const { page } = await openWithScorm2004Host(
+        browser as Browser,
+        viewAllFiles,
+        {}
+      );
+      const frame: FrameLocator = page.frameLocator('#f');
+      await page.evaluate(() => {
+        (window as any).__lms.state.failTerminate = true;
+      });
+      const exit = frame.getByRole('button', { name: 'Exit course' });
+      await exit.click();
+      await frame
+        .locator('#lpm-status')
+        .getByText('could not be ended cleanly')
+        .waitFor();
+      expect(await isTerminated(page)).toBe(false);
+      expect(await exit.isEnabled()).toBe(true);
+      await exit.click();
+      await frame
+        .locator('#lpm-status')
+        .getByText('The session has ended')
+        .waitFor();
+      expect(await isTerminated(page)).toBe(true);
+      // the only refusal on record is the simulated one
+      expect(await violations(page)).toHaveLength(1);
+      expect((await violations(page))[0]).toContain('simulated');
+      await page.close();
+    },
+    60_000
+  );
 });
