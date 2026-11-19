@@ -160,6 +160,7 @@ The AICC export is the four course description files (`course.crs`, `.au`, `.des
 - The browser POSTs to `AICC_URL` and reads the answer, so the LMS must allow that cross-origin request (CORS) or serve the package from its own address.
 - Not included: the optional `.ort`, `.pre` and `.cmp` files, blocks, and `PutComments`, `PutObjectives`, `PutInteractions`, `PutPath` and `PutPerformance`. The LMS's `Mastery_Score` is read but not used.
 - **Written from public descriptions and sample implementations, not from the AICC CMI001 document.** The exit-flag syntax, the `Score` field order and the `version` value (3.5) are the parts most worth checking against your LMS.
+- **Checked on SCORM Cloud (AICC).** Both a view-all course and a quiz course imported, launched and reported correctly: a view-all course finished as `complete`; a quiz course showed `passed` at 100%, `failed` at 40% with an 80% pass mark, resumed at the page the learner left, and the Exit course button ended the session. That covers the file layout, the status words, `Score`, `Time`, the unfinished-exit flag and `mastery_score` on one real LMS. Other AICC LMSs have not been tried.
 
 ### Exit course
 
